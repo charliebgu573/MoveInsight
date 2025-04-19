@@ -1,0 +1,2130 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+MoveInsight/
+  Assets.xcassets/
+    AccentColor.colorset/
+      Contents.json
+    AppIcon.appiconset/
+      Contents.json
+    Contents.json
+  en.lproj/
+    Localizable.strings
+  Preview Content/
+    Preview Assets.xcassets/
+      Contents.json
+  zh-Hans.lproj/
+    Localizable.strings
+  BodyPoseTypes.swift
+  ColorManager.swift
+  ContentView.swift
+  CustomTabBar.swift
+  Extensions.swift
+  HomeView.swift
+  MoveInsightApp.swift
+  PoseOverlayView.swift
+  UIComponents.swift
+  UploadTabView.swift
+  VideoPlayerRepresentable.swift
+  VideoPlayerViewModel.swift
+  VideoTransferUtils.swift
+  VideoWithPoseView.swift
+MoveInsight.xcodeproj/
+  project.xcworkspace/
+    contents.xcworkspacedata
+  xcuserdata/
+    charlie.xcuserdatad/
+      xcschemes/
+        xcschememanagement.plist
+  project.pbxproj
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="MoveInsight/en.lproj/Localizable.strings">
+// Main navigation
+"Home" = "Home";
+"Training" = "Training";
+"Videos" = "Videos";
+"Messages" = "Messages";
+
+// Upload functionality
+"Upload Video" = "Upload Video";
+"Uploading..." = "Uploading...";
+"Close" = "Close";
+"Upload Match Video" = "Upload Match Video";
+"Upload Training Video" = "Upload Training Video";
+"Match Video" = "Match Video";
+"Training Video" = "Training Video";
+"Loading Video..." = "Loading Video...";
+"Preparing video..." = "Preparing video...";
+
+// Permissions
+"Photo Library Access Required" = "Photo Library Access Required";
+"Permission to access your photo library is required to upload videos. Please grant access in Settings." = "Permission to access your photo library is required to upload videos. Please grant access in Settings.";
+"Go to Settings" = "Go to Settings";
+"Cancel" = "Cancel";
+
+// Home View
+"Good morning," = "Good morning,";
+"Match Performance" = "Match Performance";
+"/ last week" = "/ last week";
+"Well done on swing path!" = "Well done on swing path!";
+"Match History" = "Match History";
+"Technicals" = "Technicals";
+"Training Goals" = "Training Goals";
+"Tutorials Specifically For You" = "Tutorials Specifically For You";
+
+// Chart months
+"Jan" = "Jan";
+"Feb" = "Feb";
+"Mar" = "Mar";
+"Apr" = "Apr";
+"May" = "May";
+
+// Placeholder screens
+"Training Screen" = "Training Screen";
+"Upload Screen" = "Upload Screen";
+"Videos Screen" = "Videos Screen";
+"Messages Screen" = "Messages Screen";
+
+// Numeric values (formats can be localized)
+"2.3%" = "2.3%";
+"4.3" = "4.3";
+
+// Details screens
+"Technicals Detail" = "Technicals Detail";
+"Training Goals Detail" = "Training Goals Detail";
+</file>
+
+<file path="MoveInsight/zh-Hans.lproj/Localizable.strings">
+// Main navigation
+"Home" = "首页";
+"Training" = "训练";
+"Videos" = "视频";
+"Messages" = "消息";
+
+// Upload functionality
+"Upload Video" = "上传视频";
+"Uploading..." = "上传中...";
+"Close" = "关闭";
+"Upload Match Video" = "上传比赛视频";
+"Upload Training Video" = "上传训练视频";
+"Match Video" = "比赛视频";
+"Training Video" = "训练视频";
+"Loading Video..." = "加载视频中...";
+"Preparing video..." = "准备视频中...";
+
+// Permissions
+"Photo Library Access Required" = "需要访问照片库";
+"Permission to access your photo library is required to upload videos. Please grant access in Settings." = "上传视频需要访问您的照片库。请在设置中授予权限。";
+"Go to Settings" = "前往设置";
+"Cancel" = "取消";
+
+// Home View
+"Good morning," = "早上好，";
+"Match Performance" = "比赛表现";
+"/ last week" = "/ 上周";
+"Well done on swing path!" = "挥杆轨迹很棒！";
+"Match History" = "比赛历史";
+"Technicals" = "技术分析";
+"Training Goals" = "训练目标";
+"Tutorials Specifically For You" = "专为您定制的教程";
+
+// Chart months
+"Jan" = "一月";
+"Feb" = "二月";
+"Mar" = "三月";
+"Apr" = "四月";
+"May" = "五月";
+
+// Placeholder screens
+"Training Screen" = "训练界面";
+"Upload Screen" = "上传界面";
+"Videos Screen" = "视频界面";
+"Messages Screen" = "消息界面";
+
+// Numeric values (formats can be localized)
+"2.3%" = "2.3%";
+"4.3" = "4.3";
+
+// Details screens
+"Technicals Detail" = "技术分析详情";
+"Training Goals Detail" = "训练目标详情";
+</file>
+
+<file path="MoveInsight/BodyPoseTypes.swift">
+import SwiftUI
+import Vision
+
+// MARK: - Body Connection Structure
+// Defines a connection between two body joints for drawing the skeleton
+struct BodyConnection: Identifiable {
+    let id = UUID()
+    let from: VNHumanBodyPoseObservation.JointName
+    let to: VNHumanBodyPoseObservation.JointName
+}
+</file>
+
+<file path="MoveInsight/ColorManager.swift">
+import SwiftUI
+
+struct ColorManager {
+    /// Brand purple color used in MoveInsight logo (#5C2D91)
+    static let accentColor = Color(hex: "5C2D91")
+    
+    // Dynamic background: black in dark mode, white in light mode.
+    static var background: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor.black : UIColor.white
+        })
+    }
+    
+    // Primary text color: white in dark mode, black in light mode.
+    static var textPrimary: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor.white : UIColor.black
+        })
+    }
+    
+    // Secondary text color: light gray in dark mode, dark gray in light mode.
+    static var textSecondary: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor.lightGray : UIColor.darkGray
+        })
+    }
+    
+    // Card background: a subtle gray that adapts to light/dark mode.
+    static var cardBackground: Color {
+        Color(UIColor { traitCollection in
+            if traitCollection.userInterfaceStyle == .dark {
+                return UIColor.systemGray6
+            } else {
+                return UIColor.systemGray5
+            }
+        })
+    }
+    
+    /// Plus button color: white in light mode, black in dark mode.
+    static var uploadPlusButtonColor: Color {
+        Color(UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor.black : UIColor.white
+        })
+    }
+}
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17,
+                                 (int >> 4 & 0xF) * 17,
+                                 (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255,
+                           int >> 16,
+                           int >> 8 & 0xFF,
+                           int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24,
+                           int >> 16 & 0xFF,
+                           int >> 8 & 0xFF,
+                           int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0) // fallback: opaque black
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
+}
+</file>
+
+<file path="MoveInsight/CustomTabBar.swift">
+import SwiftUI
+
+// MARK: - Custom Tab Bar
+struct CustomTabBar: View {
+    @Binding var selectedTab: Int
+
+    var body: some View {
+        EvenlySpacedTabBar(selectedTab: $selectedTab)
+    }
+}
+
+// MARK: - Evenly Spaced Tab Bar
+struct EvenlySpacedTabBar: View {
+    @Binding var selectedTab: Int
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            
+            // Home button
+            TabBarButtonEvenly(iconName: "house.fill", isSelected: selectedTab == 0) {
+                selectedTab = 0
+            }
+            
+            Spacer()
+            
+            // Training button
+            TabBarButtonEvenly(iconName: "figure.run", isSelected: selectedTab == 1) {
+                selectedTab = 1
+            }
+            
+            Spacer()
+            
+            // Plus (upload) button – uses dynamic color for plus icon.
+            Button(action: {
+                // In this updated design, the Upload tab is directly rendered.
+                selectedTab = 2
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(ColorManager.accentColor)
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(ColorManager.uploadPlusButtonColor)
+                }
+            }
+            
+            Spacer()
+            
+            // Videos button
+            TabBarButtonEvenly(iconName: "play.rectangle.fill", isSelected: selectedTab == 3) {
+                selectedTab = 3
+            }
+            
+            Spacer()
+            
+            // Messages button
+            TabBarButtonEvenly(iconName: "message.fill", isSelected: selectedTab == 4) {
+                selectedTab = 4
+            }
+            
+            Spacer()
+        }
+        .padding(.vertical, 10)
+        .background(ColorManager.background)
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundColor(ColorManager.textSecondary.opacity(0.3)),
+            alignment: .top
+        )
+    }
+}
+
+// MARK: - Tab Bar Button for Evenly Spaced Layout
+struct TabBarButtonEvenly: View {
+    let iconName: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: iconName)
+                .font(.system(size: 20))
+                .foregroundColor(isSelected ? ColorManager.accentColor : ColorManager.textPrimary)
+        }
+    }
+}
+
+// MARK: - Legacy Tab Bar Button Component (kept for backward compatibility)
+struct TabBarButton: View {
+    let iconName: String
+    let title: LocalizedStringKey
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: iconName)
+                    .font(.system(size: 18))
+                    .foregroundColor(isSelected ? ColorManager.accentColor : ColorManager.textPrimary)
+
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundColor(isSelected ? ColorManager.accentColor : ColorManager.textPrimary)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/Extensions.swift">
+import SwiftUI
+import Combine
+
+// MARK: - Publisher Extension
+extension AnyCancellable {
+    func cancel(after interval: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + interval) {
+            self.cancel()
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/HomeView.swift">
+import SwiftUI
+
+struct HomeView: View {
+    // Sample user data – name typically wouldn’t be localized
+    let username = "Zhang Wei"
+    
+    var body: some View {
+        ZStack {
+            // Main background
+            ColorManager.background.ignoresSafeArea()
+            
+            // Content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // User greeting
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text(LocalizedStringKey("Good morning,"))
+                                .font(.system(size: 16))
+                                .foregroundColor(ColorManager.textSecondary)
+                            Text(username)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(ColorManager.textPrimary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Profile image
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .frame(width: 40, height: 40)
+                            .foregroundColor(ColorManager.accentColor)
+                            .background(ColorManager.cardBackground)
+                            .clipShape(Circle())
+                    }
+                    .padding(.top, 12)
+                    
+                    // Match Performance Card
+                    PerformanceCard()
+                    
+                    // Technicals Section
+                    NavigationLink(destination: Text(LocalizedStringKey("Technicals Detail"))) {
+                        SectionCard(title: LocalizedStringKey("Technicals"))
+                    }
+                    
+                    // Training Goals
+                    NavigationLink(destination: Text(LocalizedStringKey("Training Goals Detail"))) {
+                        GoalsCard()
+                    }
+                    
+                    // Tutorials Section
+                    Text(LocalizedStringKey("Tutorials Specifically For You"))
+                        .font(.headline)
+                        .foregroundColor(ColorManager.textPrimary)
+                        .padding(.top, 5)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
+            }
+        }
+    }
+}
+
+// MARK: - Performance Card
+struct PerformanceCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            HStack {
+                Text(LocalizedStringKey("Match Performance"))
+                    .font(.headline)
+                    .foregroundColor(ColorManager.textPrimary)
+                
+                Spacer()
+                
+                Image(systemName: "arrow.up.right.square")
+                    .foregroundColor(ColorManager.textSecondary)
+            }
+            
+            HStack(alignment: .top, spacing: 15) {
+                // Improvement stat
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundColor(ColorManager.accentColor)
+                        
+                        Text(LocalizedStringKey("2.3%"))
+                            .fontWeight(.bold)
+                            .foregroundColor(ColorManager.textPrimary)
+                    }
+                    
+                    Text(LocalizedStringKey("/ last week"))
+                        .font(.caption)
+                        .foregroundColor(ColorManager.textSecondary)
+                    
+                    Text(LocalizedStringKey("Well done on swing path!"))
+                        .font(.caption)
+                        .foregroundColor(ColorManager.textSecondary)
+                        .padding(.top, 5)
+                }
+                
+                Spacer()
+                
+                // Rating gauge using only purple with a gradient
+                ZStack {
+                    Circle()
+                        .trim(from: 0, to: 0.75)
+                        .stroke(
+                            AngularGradient(
+                                gradient: Gradient(colors: [ColorManager.accentColor.opacity(0.6), ColorManager.accentColor]),
+                                center: .center,
+                                startAngle: .degrees(0),
+                                endAngle: .degrees(270)
+                            ),
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(135))
+                    
+                    Text(LocalizedStringKey("4.3"))
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(ColorManager.textPrimary)
+                }
+            }
+            
+            // Progress chart
+            Chart()
+                .frame(height: 120)
+                .padding(.vertical, 8)
+            
+            // Match history link
+            HStack {
+                Text(LocalizedStringKey("Match History"))
+                    .foregroundColor(ColorManager.textSecondary)
+                    .font(.subheadline)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(ColorManager.textSecondary)
+                    .font(.caption)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(ColorManager.cardBackground.opacity(0.8))
+        )
+    }
+}
+
+// MARK: - Simple Chart Component
+struct Chart: View {
+    let months = ["Jan", "Feb", "Mar", "Apr", "May"]
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let height = geometry.size.height
+            
+            HStack(spacing: 0) {
+                ForEach(months, id: \.self) { month in
+                    Text(LocalizedStringKey(month))
+                        .font(.system(size: 8))
+                        .foregroundColor(ColorManager.textSecondary)
+                        .frame(width: width / CGFloat(months.count))
+                }
+            }
+            .position(x: width / 2, y: height - 5)
+            
+            VStack(spacing: 8) {
+                ForEach(["4", "3", "2", "1", "0"], id: \.self) { value in
+                    Text(value)
+                        .font(.system(size: 8))
+                        .foregroundColor(ColorManager.textSecondary)
+                }
+            }
+            .position(x: 8, y: height / 2)
+            
+            Path { path in
+                let points = [
+                    CGPoint(x: width * 0.1, y: height * 0.7),
+                    CGPoint(x: width * 0.3, y: height * 0.5),
+                    CGPoint(x: width * 0.5, y: height * 0.4),
+                    CGPoint(x: width * 0.7, y: height * 0.35),
+                    CGPoint(x: width * 0.9, y: height * 0.3)
+                ]
+                
+                path.move(to: points[0])
+                for point in points.dropFirst() {
+                    path.addLine(to: point)
+                }
+            }
+            .stroke(ColorManager.textPrimary, lineWidth: 1.5)
+        }
+    }
+}
+
+// MARK: - Section Card
+struct SectionCard: View {
+    let title: LocalizedStringKey
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(ColorManager.textPrimary)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(ColorManager.textSecondary)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(ColorManager.cardBackground.opacity(0.8))
+        )
+    }
+}
+
+// MARK: - Goals Card
+struct GoalsCard: View {
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(LocalizedStringKey("Training Goals"))
+                    .font(.headline)
+                    .foregroundColor(ColorManager.textPrimary)
+                
+                HStack(spacing: 8) {
+                    ForEach(0..<4) { _ in
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                    }
+                    
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(ColorManager.textSecondary.opacity(0.5))
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(ColorManager.textSecondary)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(ColorManager.cardBackground.opacity(0.8))
+        )
+    }
+}
+</file>
+
+<file path="MoveInsight/PoseOverlayView.swift">
+import SwiftUI
+import Vision
+
+// MARK: - Pose Overlay View (SwiftUI)
+struct PoseOverlayView: View {
+    let poses: [[VNHumanBodyPoseObservation.JointName: CGPoint]]
+    let connections: [BodyConnection]
+    let videoRect: CGRect
+
+    var body: some View {
+        Canvas { context, size in
+            guard !videoRect.isEmpty,
+                  !videoRect.isInfinite,
+                  !videoRect.isNull,
+                  videoRect.width > 0,
+                  videoRect.height > 0 else {
+                return
+            }
+            
+            for bodyParts in poses {
+                for connection in connections {
+                    guard let fromPointNorm = bodyParts[connection.from],
+                          let toPointNorm = bodyParts[connection.to] else { continue }
+
+                    let fromPointView = CGPoint(
+                        x: videoRect.origin.x + fromPointNorm.x * videoRect.size.width,
+                        y: videoRect.origin.y + fromPointNorm.y * videoRect.size.height
+                    )
+                    let toPointView = CGPoint(
+                        x: videoRect.origin.x + toPointNorm.x * videoRect.size.width,
+                        y: videoRect.origin.y + toPointNorm.y * videoRect.size.height
+                    )
+
+                    var path = Path()
+                    path.move(to: fromPointView)
+                    path.addLine(to: toPointView)
+
+                    context.stroke(path, with: .color(ColorManager.accentColor), lineWidth: 3)
+                }
+
+                for (_, pointNorm) in bodyParts {
+                    let pointView = CGPoint(
+                        x: videoRect.origin.x + pointNorm.x * videoRect.size.width,
+                        y: videoRect.origin.y + pointNorm.y * videoRect.size.height
+                    )
+
+                    let jointRect = CGRect(x: pointView.x - 4, y: pointView.y - 4, width: 8, height: 8)
+
+                    context.fill(Path(ellipseIn: jointRect), with: .color(ColorManager.textPrimary))
+                    context.stroke(Path(ellipseIn: jointRect.insetBy(dx: -1, dy: -1)), with: .color(ColorManager.accentColor), lineWidth: 1)
+                }
+            }
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/UIComponents.swift">
+import SwiftUI
+
+// MARK: - Custom Upload Button Style
+struct UploadButton: View {
+    let title: LocalizedStringKey
+    let iconName: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: iconName)
+                    .font(.system(size: 22))
+                Text(title)
+                    .font(.headline)
+            }
+            .foregroundColor(.white) // Always white text
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(ColorManager.accentColor)
+            .cornerRadius(12)
+        }
+        .padding(.horizontal)
+    }
+}
+
+// MARK: - Padding Constant
+// Define standard padding to use consistently
+extension CGFloat {
+    static let standard: CGFloat = 16.0
+}
+</file>
+
+<file path="MoveInsight/UploadTabView.swift">
+import SwiftUI
+import PhotosUI
+import AVKit
+
+struct UploadTabView: View {
+    @State private var selectedVideoType: VideoType?
+    @State private var showPhotoPicker = false
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var selectedVideoURL: URL?
+    @State private var showPermissionAlert = false
+    @State private var uploadProgress = 0.0
+    @State private var videoPlayerViewModel: VideoPlayerViewModel?
+    @State private var currentState: ProcessState = .selectingOptions
+
+    enum VideoType {
+        case match, training
+    }
+
+    enum ProcessState {
+        case selectingOptions
+        case uploading
+        case playingVideo
+    }
+
+    var body: some View {
+        ZStack {
+            ColorManager.background.ignoresSafeArea()
+            VStack {
+                // Title
+                Text(LocalizedStringKey("Upload Video"))
+                    .font(.title2)
+                    .foregroundColor(ColorManager.textPrimary)
+                    .padding(.top, 16)
+
+                Spacer()
+
+                switch currentState {
+                case .selectingOptions:
+                    uploadOptionsSelectionView
+                case .uploading:
+                    uploadingProgressView
+                case .playingVideo:
+                    if let viewModel = videoPlayerViewModel {
+                        VideoWithPoseView(viewModel: viewModel)
+                    } else {
+                        VStack {
+                            ProgressView().tint(ColorManager.accentColor)
+                            Text(LocalizedStringKey("Loading Video..."))
+                                .foregroundColor(ColorManager.textPrimary)
+                                .padding(.top)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            
+            // Dismiss button overlay when video is playing
+            if currentState == .playingVideo {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            dismissVideo()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title)
+                                .foregroundColor(ColorManager.textPrimary)
+                        }
+                        .padding()
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .photosPicker(
+            isPresented: $showPhotoPicker,
+            selection: $selectedItem,
+            matching: .videos,
+            preferredItemEncoding: .automatic,
+            photoLibrary: .shared()
+        )
+        .onChange(of: selectedItem) { newItem in
+            selectedVideoURL = nil
+            videoPlayerViewModel = nil
+
+            if let newItem = newItem {
+                loadVideo(from: newItem)
+            }
+        }
+        .alert(LocalizedStringKey("Photo Library Access Required"), isPresented: $showPermissionAlert) {
+            Button(LocalizedStringKey("Go to Settings")) {
+                if let url = URL(string: UIApplication.openSettingsURLString),
+                   UIApplication.shared.canOpenURL(url) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button(LocalizedStringKey("Cancel"), role: .cancel) {}
+        } message: {
+            Text(LocalizedStringKey("Permission to access your photo library is required to upload videos. Please grant access in Settings."))
+        }
+    }
+
+    private var uploadOptionsSelectionView: some View {
+        VStack(spacing: 24) {
+            UploadButton(title: LocalizedStringKey("Upload Match Video"), iconName: "sportscourt") {
+                selectedVideoType = .match
+                checkPhotoLibraryPermission()
+            }
+
+            UploadButton(title: LocalizedStringKey("Upload Training Video"), iconName: "figure.run") {
+                selectedVideoType = .training
+                checkPhotoLibraryPermission()
+            }
+        }
+    }
+
+    private var uploadingProgressView: some View {
+        VStack(spacing: 20) {
+            ProgressView(value: uploadProgress, total: 1.0)
+                .progressViewStyle(LinearProgressViewStyle(tint: ColorManager.accentColor))
+                .frame(width: 250)
+
+            Text("\(Int(uploadProgress * 100))%")
+                .foregroundColor(ColorManager.textPrimary)
+                .font(.headline)
+
+            Text(selectedVideoType == .match ?
+                 LocalizedStringKey("Match Video") :
+                 LocalizedStringKey("Training Video"))
+                .foregroundColor(ColorManager.textSecondary)
+                .padding(.top, 10)
+        }
+    }
+
+    // MARK: - Helper Methods
+    private func checkPhotoLibraryPermission() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized, .limited:
+            showPhotoPicker = true
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                DispatchQueue.main.async {
+                    if newStatus == .authorized || newStatus == .limited {
+                        showPhotoPicker = true
+                    } else {
+                        showPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showPermissionAlert = true
+        @unknown default:
+            showPermissionAlert = true
+        }
+    }
+
+    private func loadVideo(from item: PhotosPickerItem) {
+        item.loadTransferable(type: VideoItem.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let videoItem?):
+                    self.selectedVideoURL = videoItem.url
+                    self.startSimulatedUpload()
+                case .success(nil):
+                    print("Warning: Video item loaded successfully but was nil.")
+                case .failure(let error):
+                    print("Error loading video: \(error)")
+                }
+            }
+        }
+    }
+
+    private func startSimulatedUpload() {
+        guard selectedVideoURL != nil, selectedVideoType != nil else {
+            print("Missing video URL or type for upload.")
+            return
+        }
+        currentState = .uploading
+        uploadProgress = 0.0
+        let timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
+            DispatchQueue.main.async {
+                if uploadProgress < 1.0 {
+                    uploadProgress += 0.02
+                    uploadProgress = min(uploadProgress, 1.0)
+                } else {
+                    timer.invalidate()
+                    startVideoAnalysis()
+                }
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    private func startVideoAnalysis() {
+        guard let videoURL = selectedVideoURL else {
+            print("Error: Video URL is nil before starting analysis.")
+            currentState = .selectingOptions
+            return
+        }
+        videoPlayerViewModel = VideoPlayerViewModel(videoURL: videoURL)
+        currentState = .playingVideo
+    }
+    
+    private func dismissVideo() {
+        // Reset state to allow user to re-upload a video
+        currentState = .selectingOptions
+        selectedVideoURL = nil
+        videoPlayerViewModel = nil
+        uploadProgress = 0.0
+    }
+}
+</file>
+
+<file path="MoveInsight/VideoPlayerRepresentable.swift">
+import SwiftUI
+import AVKit
+
+// MARK: - Video Player Representable (UIViewRepresentable)
+struct VideoPlayerRepresentable: UIViewRepresentable {
+    let player: AVPlayer
+    @Binding var videoRect: CGRect // Binding to pass videoRect back out
+
+    // Create the custom UIView subclass
+    func makeUIView(context: Context) -> PlayerUIView {
+        print("Making PlayerUIView")
+        let view = PlayerUIView(player: player)
+        // Set the callback to update the binding
+        view.onVideoRectChange = { rect in
+            DispatchQueue.main.async {
+                if self.videoRect != rect {
+                    self.videoRect = rect
+                }
+            }
+        }
+        return view
+    }
+
+    // Update the UIView
+    func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        if uiView.playerLayer.player !== player {
+            print("Updating player instance in PlayerUIView")
+            uiView.playerLayer.player = player
+        }
+        uiView.onVideoRectChange = { rect in
+            DispatchQueue.main.async {
+                if self.videoRect != rect {
+                    self.videoRect = rect
+                }
+            }
+        }
+        uiView.playerLayer.videoGravity = .resizeAspect
+    }
+    
+    // Clean up resources if needed
+    static func dismantleUIView(_ uiView: PlayerUIView, coordinator: ()) {
+        print("Dismantling PlayerUIView")
+        uiView.playerLayer.player = nil
+        uiView.onVideoRectChange = nil // Clear callback
+    }
+}
+
+// MARK: - Custom UIView for AVPlayerLayer
+class PlayerUIView: UIView {
+    // Callback closure to report videoRect changes
+    var onVideoRectChange: ((CGRect) -> Void)?
+    private var lastKnownVideoRect: CGRect = .zero // Store last rect to avoid redundant callbacks
+
+    // Override the layerClass property to specify AVPlayerLayer
+    override static var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    // Convenience accessor for the layer as an AVPlayerLayer
+    var playerLayer: AVPlayerLayer {
+        return layer as! AVPlayerLayer
+    }
+
+    // Initializer to set the player on the layer
+    init(player: AVPlayer) {
+        super.init(frame: .zero)
+        playerLayer.player = player
+        playerLayer.videoGravity = .resizeAspect // Ensure video scales correctly
+        playerLayer.backgroundColor = UIColor.black.cgColor // Set background color for the layer
+        self.backgroundColor = .black // Set background for the view itself
+        print("PlayerUIView initialized, player assigned to layer.")
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Ensure the player layer's frame always matches the view's bounds
+        if playerLayer.frame != self.bounds {
+            print("LayoutSubviews: Updating playerLayer frame to \(self.bounds)")
+            playerLayer.frame = self.bounds
+        }
+         
+        // Get the current videoRect and report if changed
+        let currentVideoRect = playerLayer.videoRect
+        if currentVideoRect != lastKnownVideoRect && !currentVideoRect.isInfinite && !currentVideoRect.isNull {
+            print("LayoutSubviews: videoRect changed to \(currentVideoRect)")
+            lastKnownVideoRect = currentVideoRect
+            onVideoRectChange?(currentVideoRect) // Call the callback
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/VideoPlayerViewModel.swift">
+import SwiftUI
+import AVKit
+import Vision
+import Combine
+
+// MARK: - Video Player View Model
+class VideoPlayerViewModel: ObservableObject {
+    let videoURL: URL
+    let player: AVPlayer
+    let asset: AVAsset
+
+    // Published properties to update the UI
+    @Published var poses: [[VNHumanBodyPoseObservation.JointName: CGPoint]] = []
+    @Published var bodyConnections: [BodyConnection] = []
+    @Published var isVideoReady = false
+    @Published var isPlaying = false
+    @Published var videoOrientation: CGImagePropertyOrientation = .up
+
+    private var playerItemVideoOutput: AVPlayerItemVideoOutput?
+    private var displayLink: CADisplayLink?
+    private var playerItemStatusObserver: NSKeyValueObservation?
+    private var cancellables = Set<AnyCancellable>()
+
+    // Vision request handler
+    private let visionSequenceHandler = VNSequenceRequestHandler()
+    // Configure the request for multi-person detection
+    private let bodyPoseRequest: VNDetectHumanBodyPoseRequest = {
+        let request = VNDetectHumanBodyPoseRequest()
+        return request
+    }()
+
+    init(videoURL: URL) {
+        self.videoURL = videoURL
+        self.asset = AVAsset(url: videoURL)
+        self.player = AVPlayer()
+
+        print("VideoPlayerViewModel initialized with URL: \(videoURL.path)")
+
+        setupBodyConnections()
+        prepareVideoPlayback()
+    }
+
+    // Define the connections for the skeleton overlay
+    private func setupBodyConnections() {
+        bodyConnections = [
+            .init(from: .nose, to: .neck),
+            .init(from: .neck, to: .rightShoulder),
+            .init(from: .neck, to: .leftShoulder),
+            .init(from: .rightShoulder, to: .rightHip),
+            .init(from: .leftShoulder, to: .leftHip),
+            .init(from: .rightHip, to: .leftHip),
+            .init(from: .rightShoulder, to: .rightElbow),
+            .init(from: .rightElbow, to: .rightWrist),
+            .init(from: .leftShoulder, to: .leftElbow),
+            .init(from: .leftElbow, to: .leftWrist),
+            .init(from: .rightHip, to: .rightKnee),
+            .init(from: .rightKnee, to: .rightAnkle),
+            .init(from: .leftHip, to: .leftKnee),
+            .init(from: .leftKnee, to: .leftAnkle)
+        ]
+    }
+
+    // Prepare the AVPlayerItem and related components
+    private func prepareVideoPlayback() {
+        // Asynchronously load asset properties (tracks and duration)
+        Task {
+            do {
+                // Load tracks to get orientation
+                let tracks = try await asset.load(.tracks)
+                
+                // Find the video track and determine orientation
+                if let videoTrack = tracks.first(where: { $0.mediaType == .video }) {
+                    let transform = try await videoTrack.load(.preferredTransform)
+                    let orientation = orientation(from: transform)
+                    // Update orientation on the main thread
+                    await MainActor.run {
+                        print("Determined video orientation: \(orientation.rawValue)")
+                        self.videoOrientation = orientation
+                        // Now that orientation is known, create player item and setup player
+                        self.setupPlayerItemAndObservers()
+                    }
+                } else {
+                    print("Error: No video track found in asset.")
+                    await MainActor.run { self.isVideoReady = false }
+                }
+            } catch {
+                print("Error loading asset tracks or transform: \(error)")
+                await MainActor.run { self.isVideoReady = false }
+            }
+        }
+    }
+    
+    // Sets up the player item and observers AFTER orientation is determined
+    private func setupPlayerItemAndObservers() {
+        let playerItem = AVPlayerItem(asset: asset)
+        
+        // 1. Observe PlayerItem Status
+        playerItemStatusObserver = playerItem.observe(\.status, options: [.new, .initial]) { [weak self] item, _ in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                print("PlayerItem status changed: \(item.status.rawValue)")
+                switch item.status {
+                case .readyToPlay:
+                    print("PlayerItem is ready to play.")
+                    self.isVideoReady = true
+                    self.setupPlayerOutput(for: item)
+                    self.setupDisplayLink()
+                case .failed:
+                    print("PlayerItem failed to load: \(item.error?.localizedDescription ?? "Unknown error")")
+                    self.isVideoReady = false
+                case .unknown:
+                    print("PlayerItem status is unknown.")
+                    self.isVideoReady = false
+                @unknown default:
+                    self.isVideoReady = false
+                }
+            }
+        }
+
+        // 2. Observe Playback End
+        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: playerItem, queue: .main) { [weak self] _ in
+            print("Video finished playing.")
+            self?.isPlaying = false
+            self?.player.seek(to: .zero)
+        }
+        
+        // Replace the player's current item
+        player.replaceCurrentItem(with: playerItem)
+        
+        // Ensure audio plays if present
+        player.volume = 1.0
+        player.allowsExternalPlayback = true
+    }
+
+    // Setup the AVPlayerItemVideoOutput to grab frames
+    private func setupPlayerOutput(for item: AVPlayerItem) {
+        // Check if output already exists for this item
+        if item.outputs.contains(where: { $0 is AVPlayerItemVideoOutput }) {
+            print("AVPlayerItemVideoOutput already added.")
+            playerItemVideoOutput = item.outputs.first(where: { $0 is AVPlayerItemVideoOutput }) as? AVPlayerItemVideoOutput
+            return
+        }
+        
+        let pixelBufferAttributes = [
+            kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA),
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:]
+        ] as [String : Any]
+        playerItemVideoOutput = AVPlayerItemVideoOutput(pixelBufferAttributes: pixelBufferAttributes)
+
+        if let output = playerItemVideoOutput {
+            print("Adding AVPlayerItemVideoOutput to player item.")
+            item.add(output)
+        } else {
+            print("Error: Failed to create AVPlayerItemVideoOutput.")
+        }
+    }
+
+    // Setup the CADisplayLink for frame-synchronized processing
+    private func setupDisplayLink() {
+        // Invalidate existing link if any
+        displayLink?.invalidate()
+
+        // Create a new display link targeting the frame processing method
+        displayLink = CADisplayLink(target: self, selector: #selector(displayLinkDidFire))
+        displayLink?.add(to: .main, forMode: .common)
+        print("CADisplayLink setup.")
+    }
+
+    // Called by the CADisplayLink on every screen refresh
+    @objc private func displayLinkDidFire(_ link: CADisplayLink) {
+        // Ensure player item output exists and player is playing
+        guard let output = playerItemVideoOutput, player.timeControlStatus == .playing else { return }
+
+        // Get the current time for the host clock
+        let currentTime = CACurrentMediaTime()
+        // Ask the output for the item time corresponding to the host time
+        let itemTime = output.itemTime(forHostTime: currentTime)
+
+        // Check if there's a new pixel buffer available for this time
+        if output.hasNewPixelBuffer(forItemTime: itemTime) {
+            // Copy the pixel buffer if available
+            if let pixelBuffer = output.copyPixelBuffer(forItemTime: itemTime, itemTimeForDisplay: nil) {
+                // Process this frame using Vision, passing the DETECTED orientation
+                processFrame(pixelBuffer, orientation: self.videoOrientation)
+            }
+        }
+    }
+
+    // Process a single video frame with Vision to detect body pose
+    private func processFrame(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) {
+        do {
+            // Perform request with the correct orientation
+            try visionSequenceHandler.perform([bodyPoseRequest], on: pixelBuffer, orientation: orientation)
+
+            // Get the results from the request (potentially multiple observations)
+            guard let results = bodyPoseRequest.results else {
+                // No results, clear poses
+                DispatchQueue.main.async {
+                    if !self.poses.isEmpty {
+                        self.poses = []
+                    }
+                }
+                return
+            }
+
+            // Multi-person processing
+            var detectedPoses: [[VNHumanBodyPoseObservation.JointName: CGPoint]] = []
+            for observation in results {
+                let points = extractPoints(from: observation)
+                if !points.isEmpty {
+                    detectedPoses.append(points)
+                }
+            }
+
+            // Update the published property on the main thread
+            DispatchQueue.main.async {
+                self.poses = detectedPoses
+            }
+        } catch {
+            print("Vision performance error: \(error)")
+        }
+    }
+
+    // Extract joint points from a SINGLE VNHumanBodyPoseObservation
+    private func extractPoints(from observation: VNHumanBodyPoseObservation) -> [VNHumanBodyPoseObservation.JointName: CGPoint] {
+        var detectedPoints: [VNHumanBodyPoseObservation.JointName: CGPoint] = [:]
+
+        do {
+            // Get the recognized points for all available joints in this observation
+            let recognizedPoints = try observation.recognizedPoints(.all)
+
+            for (jointName, point) in recognizedPoints {
+                // Filter by confidence threshold
+                if point.confidence > 0.1 {
+                    // Convert to SwiftUI coordinates by flipping Y
+                    detectedPoints[jointName] = CGPoint(x: point.location.x, y: 1.0 - point.location.y)
+                }
+            }
+        } catch {
+            print("Error getting recognized points for an observation: \(error)")
+        }
+
+        return detectedPoints
+    }
+    
+    // Helper function to determine CGImagePropertyOrientation from CGAffineTransform
+    private func orientation(from transform: CGAffineTransform) -> CGImagePropertyOrientation {
+        let t = transform
+        // Analyze the transform matrix to determine orientation
+        switch (t.a, t.b, t.c, t.d) {
+        case (0.0, 1.0, -1.0, 0.0): // Portrait
+            return .right
+        case (0.0, -1.0, 1.0, 0.0): // Portrait (Upside Down)
+            return .left
+        case (-1.0, 0.0, 0.0, -1.0): // Landscape (Left)
+            return .down
+        case (1.0, 0.0, 0.0, 1.0): // Landscape (Right) - Identity
+            return .up
+        default: // Default orientation if transform doesn't match known patterns
+            print("Warning: Unknown CGAffineTransform found: \(t). Defaulting to .up orientation.")
+            return .up
+        }
+    }
+
+    // MARK: - Playback Control Methods
+    func play() {
+        if isVideoReady {
+            print("Playing video.")
+            player.play()
+            isPlaying = true
+            if displayLink == nil || displayLink?.isPaused == true {
+                setupDisplayLink()
+            }
+            displayLink?.isPaused = false
+        } else {
+            print("Attempted to play before video was ready.")
+        }
+    }
+
+    func pause() {
+        print("Pausing video.")
+        player.pause()
+        isPlaying = false
+        displayLink?.isPaused = true
+    }
+
+    func togglePlayPause() {
+        if isPlaying {
+            pause()
+        } else {
+            play()
+        }
+    }
+    
+    func restart() {
+        print("Restarting video.")
+        player.seek(to: .zero) { [weak self] finished in
+            if finished {
+                self?.play()
+            }
+        }
+    }
+
+    // Clean up resources when the ViewModel is deallocated
+    func cleanup() {
+        print("Cleaning up VideoPlayerViewModel.")
+        // Stop playback
+        player.pause()
+        isPlaying = false
+
+        // Invalidate display link
+        displayLink?.invalidate()
+        displayLink = nil
+
+        // Remove KVO observer
+        playerItemStatusObserver?.invalidate()
+        playerItemStatusObserver = nil
+
+        // Remove NotificationCenter observer
+        NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+        
+        // Cancel Combine subscriptions
+        cancellables.forEach { $0.cancel() }
+        cancellables.removeAll()
+
+        // Remove video output from player item
+        if let output = playerItemVideoOutput, let item = player.currentItem {
+            print("Removing AVPlayerItemVideoOutput.")
+            item.remove(output)
+        }
+        playerItemVideoOutput = nil
+        
+        // Nil out player and item to break potential retain cycles
+        player.replaceCurrentItem(with: nil)
+    }
+
+    deinit {
+        print("VideoPlayerViewModel deinit")
+        cleanup()
+    }
+}
+</file>
+
+<file path="MoveInsight/VideoTransferUtils.swift">
+import SwiftUI
+import PhotosUI
+
+// MARK: - VideoItem Transferable
+struct VideoItem: Transferable {
+    let url: URL
+    
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            // Copy to a temporary location to ensure we have access
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileName = "\(UUID().uuidString).\(received.file.pathExtension)" // Ensure unique filename
+            let copyURL = tempDir.appendingPathComponent(fileName)
+            
+            // Attempt to remove existing file at destination URL before copying
+            try? FileManager.default.removeItem(at: copyURL)
+
+            try FileManager.default.copyItem(at: received.file, to: copyURL)
+            return Self.init(url: copyURL)
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/VideoWithPoseView.swift">
+import SwiftUI
+import AVKit
+
+// MARK: - Video with Pose View
+struct VideoWithPoseView: View {
+    @ObservedObject var viewModel: VideoPlayerViewModel
+    @State private var showControls = true
+    @State private var controlsTimer: Timer?
+    @State private var videoRect: CGRect = .zero
+
+    var body: some View {
+        ZStack {
+            ColorManager.background.edgesIgnoringSafeArea(.all)
+
+            if viewModel.isVideoReady {
+                GeometryReader { geometry in
+                    ZStack(alignment: .bottom) {
+                        VideoPlayerRepresentable(player: viewModel.player, videoRect: $videoRect)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+
+                        PoseOverlayView(
+                            poses: viewModel.poses,
+                            connections: viewModel.bodyConnections,
+                            videoRect: videoRect
+                        )
+                        .allowsHitTesting(false)
+
+                        if showControls {
+                            playbackControls
+                                .padding()
+                                .background(ColorManager.background.opacity(0.5))
+                                .cornerRadius(10)
+                                .padding(.bottom, 30)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                .zIndex(1)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        toggleControlsVisibility()
+                    }
+                }
+            } else {
+                VStack {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor))
+                        .scaleEffect(1.5)
+
+                    Text(LocalizedStringKey("Preparing video..."))
+                        .foregroundColor(ColorManager.textPrimary)
+                        .padding(.top, 20)
+                }
+            }
+        }
+        .edgesIgnoringSafeArea(.all)
+        .onAppear {
+            if viewModel.isVideoReady && !viewModel.isPlaying {
+                viewModel.play()
+                scheduleControlHiding()
+            }
+        }
+        .onDisappear {
+            viewModel.pause()
+            invalidateControlsTimer()
+        }
+        .onChange(of: viewModel.isVideoReady) { isReady in
+            if isReady && !viewModel.isPlaying {
+                viewModel.play()
+                scheduleControlHiding()
+            }
+        }
+    }
+
+    private var playbackControls: some View {
+        HStack(spacing: 30) {
+            Button {
+                viewModel.restart()
+                resetControlsTimer()
+            } label: {
+                Image(systemName: "backward.end.fill")
+                    .font(.title2)
+            }
+
+            Button {
+                viewModel.togglePlayPause()
+                resetControlsTimer()
+            } label: {
+                Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.largeTitle)
+            }
+            
+            Button {} label: {
+                Image(systemName: "forward.end.fill")
+                    .font(.title2)
+                    .opacity(0)
+            }
+            .disabled(true)
+        }
+        .foregroundColor(ColorManager.accentColor)
+    }
+    
+    private func toggleControlsVisibility() {
+        withAnimation {
+            showControls.toggle()
+        }
+        if showControls {
+            scheduleControlHiding()
+        } else {
+            invalidateControlsTimer()
+        }
+    }
+
+    private func scheduleControlHiding() {
+        invalidateControlsTimer()
+        controlsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
+            DispatchQueue.main.async {
+                withAnimation {
+                    self.showControls = false
+                }
+            }
+        }
+    }
+
+    private func invalidateControlsTimer() {
+        controlsTimer?.invalidate()
+        controlsTimer = nil
+    }
+
+    private func resetControlsTimer() {
+        if showControls {
+            scheduleControlHiding()
+        }
+    }
+}
+</file>
+
+<file path="MoveInsight/Assets.xcassets/AccentColor.colorset/Contents.json">
+{
+  "colors" : [
+    {
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+</file>
+
+<file path="MoveInsight/Assets.xcassets/AppIcon.appiconset/Contents.json">
+{
+  "images" : [
+    {
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
+      ],
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413 1.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "appearances" : [
+        {
+          "appearance" : "luminosity",
+          "value" : "tinted"
+        }
+      ],
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413 2.png",
+      "idiom" : "universal",
+      "platform" : "ios",
+      "size" : "1024x1024"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+</file>
+
+<file path="MoveInsight/Assets.xcassets/Contents.json">
+{
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+</file>
+
+<file path="MoveInsight/Preview Content/Preview Assets.xcassets/Contents.json">
+{
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+</file>
+
+<file path="MoveInsight/ContentView.swift">
+import SwiftUI
+
+struct ContentView: View {
+    @State private var selectedTab = 0
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                // Main background
+                ColorManager.background.ignoresSafeArea()
+
+                // Content area based on selected tab
+                VStack {
+                    TabView(selection: $selectedTab) {
+                        HomeView()
+                            .tag(0)
+                        
+                        Text(LocalizedStringKey("Training Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(1)
+                        
+                        // Use the new UploadTabView directly in the Upload tab
+                        UploadTabView()
+                            .tag(2)
+                        
+                        Text(LocalizedStringKey("Videos Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(3)
+                        
+                        Text(LocalizedStringKey("Messages Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(4)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    
+                    // Custom tab bar now using the evenly-spaced implementation
+                    CustomTabBar(selectedTab: $selectedTab)
+                }
+            }
+            .navigationBarHidden(true)
+        }
+    }
+}
+
+// MARK: - Previews
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .preferredColorScheme(.dark)
+    }
+}
+</file>
+
+<file path="MoveInsight/MoveInsightApp.swift">
+import SwiftUI
+
+@main
+struct MoveInsightApp: App {
+    init() {
+        // Set the accent color for the entire app
+        UINavigationBar.appearance().tintColor = UIColor(Color.accentColor)
+    }
+    
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .accentColor(ColorManager.accentColor)
+        }
+    }
+}
+
+// For iOS 17+, we can use the newer API too
+#if swift(>=5.9)
+extension MoveInsightApp {
+    @ViewBuilder
+    private func contentWithTint() -> some View {
+        if #available(iOS 17.0, *) {
+            ContentView()
+                .preferredColorScheme(.dark)
+                .tint(ColorManager.accentColor)
+        } else {
+            ContentView()
+                .preferredColorScheme(.dark)
+                .accentColor(ColorManager.accentColor)
+        }
+    }
+}
+#endif
+</file>
+
+<file path="MoveInsight.xcodeproj/project.xcworkspace/contents.xcworkspacedata">
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "self:">
+   </FileRef>
+</Workspace>
+</file>
+
+<file path="MoveInsight.xcodeproj/xcuserdata/charlie.xcuserdatad/xcschemes/xcschememanagement.plist">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>SchemeUserState</key>
+	<dict>
+		<key>MoveInsight.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>0</integer>
+		</dict>
+	</dict>
+</dict>
+</plist>
+</file>
+
+<file path="MoveInsight.xcodeproj/project.pbxproj">
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXFileReference section */
+		CB1C3FAE2D9D493B008FC7AB /* MoveInsight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoveInsight.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		CB1C3FB02D9D493B008FC7AB /* MoveInsight */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MoveInsight;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CB1C3FAB2D9D493B008FC7AB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CB1C3FA52D9D493B008FC7AB = {
+			isa = PBXGroup;
+			children = (
+				CB1C3FB02D9D493B008FC7AB /* MoveInsight */,
+				CB1C3FAF2D9D493B008FC7AB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CB1C3FAF2D9D493B008FC7AB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CB1C3FAE2D9D493B008FC7AB /* MoveInsight.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		CB1C3FAD2D9D493B008FC7AB /* MoveInsight */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CB1C3FBC2D9D493D008FC7AB /* Build configuration list for PBXNativeTarget "MoveInsight" */;
+			buildPhases = (
+				CB1C3FAA2D9D493B008FC7AB /* Sources */,
+				CB1C3FAB2D9D493B008FC7AB /* Frameworks */,
+				CB1C3FAC2D9D493B008FC7AB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CB1C3FB02D9D493B008FC7AB /* MoveInsight */,
+			);
+			name = MoveInsight;
+			packageProductDependencies = (
+			);
+			productName = MoveInsight;
+			productReference = CB1C3FAE2D9D493B008FC7AB /* MoveInsight.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CB1C3FA62D9D493B008FC7AB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1610;
+				LastUpgradeCheck = 1610;
+				TargetAttributes = {
+					CB1C3FAD2D9D493B008FC7AB = {
+						CreatedOnToolsVersion = 16.1;
+					};
+				};
+			};
+			buildConfigurationList = CB1C3FA92D9D493B008FC7AB /* Build configuration list for PBXProject "MoveInsight" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = CB1C3FA52D9D493B008FC7AB;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CB1C3FAF2D9D493B008FC7AB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CB1C3FAD2D9D493B008FC7AB /* MoveInsight */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CB1C3FAC2D9D493B008FC7AB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CB1C3FAA2D9D493B008FC7AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		CB1C3FBA2D9D493D008FC7AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CB1C3FBB2D9D493D008FC7AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CB1C3FBD2D9D493D008FC7AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MoveInsight/Preview Content\"";
+				DEVELOPMENT_TEAM = 2VS9GH9QTB;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Needs permission to upload video";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.MoveInsight;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB1C3FBE2D9D493D008FC7AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"MoveInsight/Preview Content\"";
+				DEVELOPMENT_TEAM = 2VS9GH9QTB;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Needs permission to upload video";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.MoveInsight;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CB1C3FA92D9D493B008FC7AB /* Build configuration list for PBXProject "MoveInsight" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB1C3FBA2D9D493D008FC7AB /* Debug */,
+				CB1C3FBB2D9D493D008FC7AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CB1C3FBC2D9D493D008FC7AB /* Build configuration list for PBXNativeTarget "MoveInsight" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB1C3FBD2D9D493D008FC7AB /* Debug */,
+				CB1C3FBE2D9D493D008FC7AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CB1C3FA62D9D493B008FC7AB /* Project object */;
+}
+</file>
+
+</files>

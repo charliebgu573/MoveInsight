@@ -1,0 +1,53 @@
+// Main navigation
+"Home" = "Home";
+"Training" = "Training";
+"Videos" = "Videos";
+"Messages" = "Messages";
+
+// Upload functionality
+"Upload Video" = "Upload Video";
+"Uploading..." = "Uploading...";
+"Close" = "Close";
+"Upload Match Video" = "Upload Match Video";
+"Upload Training Video" = "Upload Training Video";
+"Match Video" = "Match Video";
+"Training Video" = "Training Video";
+"Loading Video..." = "Loading Video...";
+"Preparing video..." = "Preparing video...";
+
+// Permissions
+"Photo Library Access Required" = "Photo Library Access Required";
+"Permission to access your photo library is required to upload videos. Please grant access in Settings." = "Permission to access your photo library is required to upload videos. Please grant access in Settings.";
+"Go to Settings" = "Go to Settings";
+"Cancel" = "Cancel";
+
+// Home View
+"Good morning," = "Good morning,";
+"Match Performance" = "Match Performance";
+"/ last week" = "/ last week";
+"Well done on swing path!" = "Well done on swing path!";
+"Match History" = "Match History";
+"Technicals" = "Technicals";
+"Training Goals" = "Training Goals";
+"Tutorials Specifically For You" = "Tutorials Specifically For You";
+
+// Chart months
+"Jan" = "Jan";
+"Feb" = "Feb";
+"Mar" = "Mar";
+"Apr" = "Apr";
+"May" = "May";
+
+// Placeholder screens
+"Training Screen" = "Training Screen";
+"Upload Screen" = "Upload Screen";
+"Videos Screen" = "Videos Screen";
+"Messages Screen" = "Messages Screen";
+
+// Numeric values (formats can be localized)
+"2.3%" = "2.3%";
+"4.3" = "4.3";
+
+// Details screens
+"Technicals Detail" = "Technicals Detail";
+"Training Goals Detail" = "Training Goals Detail";

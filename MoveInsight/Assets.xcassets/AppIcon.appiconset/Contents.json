@@ -1,6 +1,7 @@
 {
   "images" : [
     {
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -12,6 +13,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413 1.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -23,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "d938011a54572aa285aa038b0f9eea3043b99b8ea3d567c2b9f568038a243413 2.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

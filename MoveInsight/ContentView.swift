@@ -1,24 +1,51 @@
-//
-//  ContentView.swift
-//  MoveInsight
-//
-//  Created by Charlie Gu on 02/04/2025.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedTab = 0
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationView {
+            ZStack {
+                // Main background
+                ColorManager.background.ignoresSafeArea()
+
+                // Content area based on selected tab
+                VStack {
+                    TabView(selection: $selectedTab) {
+                        HomeView()
+                            .tag(0)
+                        
+                        Text(LocalizedStringKey("Training Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(1)
+                        
+                        // Use the new UploadTabView directly in the Upload tab
+                        UploadTabView()
+                            .tag(2)
+                        
+                        Text(LocalizedStringKey("Videos Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(3)
+                        
+                        Text(LocalizedStringKey("Messages Screen"))
+                            .foregroundColor(ColorManager.textPrimary)
+                            .tag(4)
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                    
+                    // Custom tab bar now using the evenly-spaced implementation
+                    CustomTabBar(selectedTab: $selectedTab)
+                }
+            }
+            .navigationBarHidden(true)
         }
-        .padding()
     }
 }
 
-#Preview {
-    ContentView()
+// MARK: - Previews
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .preferredColorScheme(.dark)
+    }
 }

@@ -1,0 +1,53 @@
+// Main navigation
+"Home" = "首页";
+"Training" = "训练";
+"Videos" = "视频";
+"Messages" = "消息";
+
+// Upload functionality
+"Upload Video" = "上传视频";
+"Uploading..." = "上传中...";
+"Close" = "关闭";
+"Upload Match Video" = "上传比赛视频";
+"Upload Training Video" = "上传训练视频";
+"Match Video" = "比赛视频";
+"Training Video" = "训练视频";
+"Loading Video..." = "加载视频中...";
+"Preparing video..." = "准备视频中...";
+
+// Permissions
+"Photo Library Access Required" = "需要访问照片库";
+"Permission to access your photo library is required to upload videos. Please grant access in Settings." = "上传视频需要访问您的照片库。请在设置中授予权限。";
+"Go to Settings" = "前往设置";
+"Cancel" = "取消";
+
+// Home View
+"Good morning," = "早上好，";
+"Match Performance" = "比赛表现";
+"/ last week" = "/ 上周";
+"Well done on swing path!" = "挥杆轨迹很棒！";
+"Match History" = "比赛历史";
+"Technicals" = "技术分析";
+"Training Goals" = "训练目标";
+"Tutorials Specifically For You" = "专为您定制的教程";
+
+// Chart months
+"Jan" = "一月";
+"Feb" = "二月";
+"Mar" = "三月";
+"Apr" = "四月";
+"May" = "五月";
+
+// Placeholder screens
+"Training Screen" = "训练界面";
+"Upload Screen" = "上传界面";
+"Videos Screen" = "视频界面";
+"Messages Screen" = "消息界面";
+
+// Numeric values (formats can be localized)
+"2.3%" = "2.3%";
+"4.3" = "4.3";
+
+// Details screens
+"Technicals Detail" = "技术分析详情";
+"Training Goals Detail" = "训练目标详情";
