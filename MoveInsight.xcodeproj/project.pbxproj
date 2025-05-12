@@ -10,9 +10,22 @@
 		CB1C3FAE2D9D493B008FC7AB /* MoveInsight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoveInsight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CB6878622DD191DB00A36A08 /* Exceptions for "MoveInsight" folder in "MoveInsight" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CB1C3FAD2D9D493B008FC7AB /* MoveInsight */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CB1C3FB02D9D493B008FC7AB /* MoveInsight */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CB6878622DD191DB00A36A08 /* Exceptions for "MoveInsight" folder in "MoveInsight" target */,
+			);
 			path = MoveInsight;
 			sourceTree = "<group>";
 		};
@@ -256,6 +269,7 @@
 				DEVELOPMENT_TEAM = 2VS9GH9QTB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoveInsight/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Needs permission to upload video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -291,6 +305,7 @@
 				DEVELOPMENT_TEAM = 2VS9GH9QTB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MoveInsight/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Needs permission to upload video";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

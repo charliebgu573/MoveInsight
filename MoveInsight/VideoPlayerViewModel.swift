@@ -44,6 +44,21 @@ class VideoPlayerViewModel: ObservableObject {
         let request = VNDetectHumanBodyPoseRequest()
         return request
     }()
+    
+    // Add property to accumulate poses over time
+    private var accumulatedPoses: [[VNHumanBodyPoseObservation.JointName: CGPoint]] = []
+    private let maxFrames = 300 // Limit to 300 frames (10 seconds at 30fps)
+    
+    // Method to get all accumulated poses
+    func getAllPoses() -> [[VNHumanBodyPoseObservation.JointName: CGPoint]] {
+        return accumulatedPoses
+    }
+    
+    // Method to clear accumulated poses
+    func clearAccumulatedPoses() {
+        print("Clearing accumulated poses")
+        accumulatedPoses.removeAll()
+    }
 
     init(videoURL: URL, videoSource: Pose3DBody.VideoSource) {
         self.videoURL = videoURL
@@ -261,7 +276,27 @@ class VideoPlayerViewModel: ObservableObject {
 
             // Update the published property on the main thread
             DispatchQueue.main.async {
+                // Update current frame poses
                 self.poses = detectedPoses
+                
+                // Add these poses to our accumulated history
+                if !detectedPoses.isEmpty {
+                    // For simplicity, just take the first person detected in the frame
+                    if let firstPersonPose = detectedPoses.first {
+                        // Limit to maxFrames
+                        if self.accumulatedPoses.count >= self.maxFrames {
+                            // Remove oldest frame
+                            self.accumulatedPoses.removeFirst()
+                        }
+                        // Add the new frame's pose
+                        self.accumulatedPoses.append(firstPersonPose)
+                        
+                        if self.accumulatedPoses.count % 30 == 0 {  // Log every 30 frames
+                            print("Accumulated \(self.accumulatedPoses.count) frames with poses.")
+                        }
+                    }
+                }
+                
                 // if this is the very first frame, let the UI know it's ready
                 if !detectedPoses.isEmpty && !self.isVideoReady {
                     self.isVideoReady = true
@@ -380,6 +415,9 @@ class VideoPlayerViewModel: ObservableObject {
             item.remove(output)
         }
         playerItemVideoOutput = nil
+        
+        // Clear accumulated poses
+        accumulatedPoses.removeAll()
         
         // Nil out player and item to break potential retain cycles
         player.replaceCurrentItem(with: nil)
