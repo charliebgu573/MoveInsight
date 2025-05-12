@@ -3,212 +3,115 @@ import PhotosUI
 import AVKit
 
 struct UploadTabView: View {
-    @State private var selectedVideoType: VideoType?
-    @State private var showPhotoPicker = false
-    @State private var selectedItem: PhotosPickerItem?
-    @State private var selectedVideoURL: URL?
-    @State private var showPermissionAlert = false
-    @State private var uploadProgress = 0.0
-    @State private var videoPlayerViewModel: VideoPlayerViewModel?
-    @State private var currentState: ProcessState = .selectingOptions
-
-    enum VideoType {
-        case match, training
-    }
-
-    enum ProcessState {
-        case selectingOptions
-        case uploading
-        case playingVideo
-    }
-
+    @State private var navigateToTechniquesList = false
+    
     var body: some View {
-        ZStack {
-            ColorManager.background.ignoresSafeArea()
-            VStack {
-                // Title
-                Text(LocalizedStringKey("Upload Video"))
-                    .font(.title2)
-                    .foregroundColor(ColorManager.textPrimary)
-                    .padding(.top, 16)
-
-                Spacer()
-
-                switch currentState {
-                case .selectingOptions:
-                    uploadOptionsSelectionView
-                case .uploading:
-                    uploadingProgressView
-                case .playingVideo:
-                    if let viewModel = videoPlayerViewModel {
-                        VideoWithPoseView(viewModel: viewModel)
-                    } else {
-                        VStack {
-                            ProgressView().tint(ColorManager.accentColor)
-                            Text(LocalizedStringKey("Loading Video..."))
-                                .foregroundColor(ColorManager.textPrimary)
-                                .padding(.top)
-                        }
+        NavigationView {
+            ZStack {
+                ColorManager.background.ignoresSafeArea()
+                
+                VStack(spacing: 30) {
+                    // Header
+                    Text("Upload Video")
+                        .font(.title)
+                        .foregroundColor(ColorManager.textPrimary)
+                        .padding(.top, 40)
+                    
+                    Text("Choose the type of video you want to upload")
+                        .font(.subheadline)
+                        .foregroundColor(ColorManager.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                    
+                    Spacer()
+                    
+                    // Technique Video Option
+                    NavigationLink(destination: TechniquesListView(), isActive: $navigateToTechniquesList) {
+                        EmptyView()
                     }
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            
-            // Dismiss button overlay when video is playing
-            if currentState == .playingVideo {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            dismissVideo()
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title)
-                                .foregroundColor(ColorManager.textPrimary)
-                        }
-                        .padding()
+                    
+                    Button(action: {
+                        navigateToTechniquesList = true
+                    }) {
+                        UploadOptionCard(
+                            title: "Upload Technique Video",
+                            description: "Analyze and compare your badminton techniques with model performers",
+                            icon: "figure.badminton"
+                        )
                     }
+                    .buttonStyle(ScaleButtonStyle())
+                    
+                    // Match Video Option
+                    Button(action: {
+                        // Do nothing for now, as per requirements
+                    }) {
+                        UploadOptionCard(
+                            title: "Upload Match Video",
+                            description: "Upload your match videos for performance analysis",
+                            icon: "sportscourt"
+                        )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                    
                     Spacer()
                 }
+                .padding(.horizontal, 20)
             }
-        }
-        .photosPicker(
-            isPresented: $showPhotoPicker,
-            selection: $selectedItem,
-            matching: .videos,
-            preferredItemEncoding: .automatic,
-            photoLibrary: .shared()
-        )
-        .onChange(of: selectedItem) { newItem in
-            selectedVideoURL = nil
-            videoPlayerViewModel = nil
-
-            if let newItem = newItem {
-                loadVideo(from: newItem)
-            }
-        }
-        .alert(LocalizedStringKey("Photo Library Access Required"), isPresented: $showPermissionAlert) {
-            Button(LocalizedStringKey("Go to Settings")) {
-                if let url = URL(string: UIApplication.openSettingsURLString),
-                   UIApplication.shared.canOpenURL(url) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button(LocalizedStringKey("Cancel"), role: .cancel) {}
-        } message: {
-            Text(LocalizedStringKey("Permission to access your photo library is required to upload videos. Please grant access in Settings."))
+            .navigationBarHidden(true)
         }
     }
+}
 
-    private var uploadOptionsSelectionView: some View {
-        VStack(spacing: 24) {
-            UploadButton(title: LocalizedStringKey("Upload Match Video"), iconName: "sportscourt") {
-                selectedVideoType = .match
-                checkPhotoLibraryPermission()
-            }
-
-            UploadButton(title: LocalizedStringKey("Upload Training Video"), iconName: "figure.run") {
-                selectedVideoType = .training
-                checkPhotoLibraryPermission()
-            }
-        }
-    }
-
-    private var uploadingProgressView: some View {
-        VStack(spacing: 20) {
-            ProgressView(value: uploadProgress, total: 1.0)
-                .progressViewStyle(LinearProgressViewStyle(tint: ColorManager.accentColor))
-                .frame(width: 250)
-
-            Text("\(Int(uploadProgress * 100))%")
-                .foregroundColor(ColorManager.textPrimary)
-                .font(.headline)
-
-            Text(selectedVideoType == .match ?
-                 LocalizedStringKey("Match Video") :
-                 LocalizedStringKey("Training Video"))
-                .foregroundColor(ColorManager.textSecondary)
-                .padding(.top, 10)
-        }
-    }
-
-    // MARK: - Helper Methods
-    private func checkPhotoLibraryPermission() {
-        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        switch status {
-        case .authorized, .limited:
-            showPhotoPicker = true
-        case .notDetermined:
-            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
-                DispatchQueue.main.async {
-                    if newStatus == .authorized || newStatus == .limited {
-                        showPhotoPicker = true
-                    } else {
-                        showPermissionAlert = true
-                    }
-                }
-            }
-        case .denied, .restricted:
-            showPermissionAlert = true
-        @unknown default:
-            showPermissionAlert = true
-        }
-    }
-
-    private func loadVideo(from item: PhotosPickerItem) {
-        item.loadTransferable(type: VideoItem.self) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let videoItem?):
-                    self.selectedVideoURL = videoItem.url
-                    self.startSimulatedUpload()
-                case .success(nil):
-                    print("Warning: Video item loaded successfully but was nil.")
-                case .failure(let error):
-                    print("Error loading video: \(error)")
-                }
-            }
-        }
-    }
-
-    private func startSimulatedUpload() {
-        guard selectedVideoURL != nil, selectedVideoType != nil else {
-            print("Missing video URL or type for upload.")
-            return
-        }
-        currentState = .uploading
-        uploadProgress = 0.0
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
-            DispatchQueue.main.async {
-                if uploadProgress < 1.0 {
-                    uploadProgress += 0.02
-                    uploadProgress = min(uploadProgress, 1.0)
-                } else {
-                    timer.invalidate()
-                    startVideoAnalysis()
-                }
-            }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-    }
-
-    private func startVideoAnalysis() {
-        guard let videoURL = selectedVideoURL else {
-            print("Error: Video URL is nil before starting analysis.")
-            currentState = .selectingOptions
-            return
-        }
-        videoPlayerViewModel = VideoPlayerViewModel(videoURL: videoURL)
-        currentState = .playingVideo
-    }
+// Card view for upload options
+struct UploadOptionCard: View {
+    let title: String
+    let description: String
+    let icon: String
     
-    private func dismissVideo() {
-        // Reset state to allow user to re-upload a video
-        currentState = .selectingOptions
-        selectedVideoURL = nil
-        videoPlayerViewModel = nil
-        uploadProgress = 0.0
+    var body: some View {
+        HStack(spacing: 20) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(ColorManager.accentColor.opacity(0.2))
+                    .frame(width: 70, height: 70)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 30))
+                    .foregroundColor(ColorManager.accentColor)
+            }
+            
+            // Text content
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(ColorManager.textPrimary)
+                
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(ColorManager.textSecondary)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+            
+            // Arrow
+            Image(systemName: "chevron.right")
+                .foregroundColor(ColorManager.textSecondary)
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(ColorManager.cardBackground)
+        )
+    }
+}
+
+// Button style with scale effect
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
     }
 }

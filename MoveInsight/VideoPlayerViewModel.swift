@@ -2,6 +2,7 @@ import SwiftUI
 import AVKit
 import Vision
 import Combine
+import simd
 
 // MARK: - Video Player View Model
 class VideoPlayerViewModel: ObservableObject {
@@ -11,10 +12,25 @@ class VideoPlayerViewModel: ObservableObject {
 
     // Published properties to update the UI
     @Published var poses: [[VNHumanBodyPoseObservation.JointName: CGPoint]] = []
+    @Published var pose3DBodies: [Pose3DBody] = []
     @Published var bodyConnections: [BodyConnection] = []
     @Published var isVideoReady = false
     @Published var isPlaying = false
     @Published var videoOrientation: CGImagePropertyOrientation = .up
+    @Published var currentDepthMap: MLMultiArray?
+    @Published var depthImage: UIImage?
+    
+    @Published var currentDepthBuffer: CVPixelBuffer?
+    
+    // Current video properties
+    private(set) var videoSize: CGSize = .zero
+    
+    // Source identifier for 3D poses
+    let videoSource: Pose3DBody.VideoSource
+    
+    // Services
+    private let depthEstimationService = DepthEstimationService()
+    private let pose3DProcessor = Pose3DProcessor()
 
     private var playerItemVideoOutput: AVPlayerItemVideoOutput?
     private var displayLink: CADisplayLink?
@@ -29,10 +45,11 @@ class VideoPlayerViewModel: ObservableObject {
         return request
     }()
 
-    init(videoURL: URL) {
+    init(videoURL: URL, videoSource: Pose3DBody.VideoSource) {
         self.videoURL = videoURL
         self.asset = AVAsset(url: videoURL)
         self.player = AVPlayer()
+        self.videoSource = videoSource
 
         print("VideoPlayerViewModel initialized with URL: \(videoURL.path)")
 
@@ -65,17 +82,22 @@ class VideoPlayerViewModel: ObservableObject {
         // Asynchronously load asset properties (tracks and duration)
         Task {
             do {
-                // Load tracks to get orientation
+                // Load tracks to get orientation and dimensions
                 let tracks = try await asset.load(.tracks)
                 
-                // Find the video track and determine orientation
+                // Find the video track and determine orientation and size
                 if let videoTrack = tracks.first(where: { $0.mediaType == .video }) {
                     let transform = try await videoTrack.load(.preferredTransform)
                     let orientation = orientation(from: transform)
-                    // Update orientation on the main thread
+                    
+                    // Get video dimensions
+                    let size = try await videoTrack.load(.naturalSize)
+                    
+                    // Update on the main thread
                     await MainActor.run {
                         print("Determined video orientation: \(orientation.rawValue)")
                         self.videoOrientation = orientation
+                        self.videoSize = size
                         // Now that orientation is known, create player item and setup player
                         self.setupPlayerItemAndObservers()
                     }
@@ -186,8 +208,33 @@ class VideoPlayerViewModel: ObservableObject {
         }
     }
 
-    // Process a single video frame with Vision to detect body pose
+    // Process a single video frame with Vision to detect body pose and estimate depth
     private func processFrame(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) {
+        // 1. Detect 2D poses
+        process2DPoses(pixelBuffer, orientation: orientation)
+        
+        // 2. Estimate depth
+        if let depthBuffer = depthEstimationService.estimateDepth(from: pixelBuffer) {
+            DispatchQueue.main.async {
+                self.currentDepthBuffer = depthBuffer
+                self.depthImage = self.depthEstimationService.depthMapToImage(from: depthBuffer)
+                
+                // 3. Combine 2D poses and depth to create 3D poses
+                if !self.poses.isEmpty {
+                    let pose3DBodies = self.pose3DProcessor.process(
+                        poses: self.poses,
+                        depthBuffer: depthBuffer,
+                        videoSize: self.videoSize
+                    ).map { Pose3DBody(joints: $0, videoSource: self.videoSource) }
+                    
+                    self.pose3DBodies = pose3DBodies
+                }
+            }
+        }
+    }
+    
+    // Process 2D poses with Vision
+    private func process2DPoses(_ pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) {
         do {
             // Perform request with the correct orientation
             try visionSequenceHandler.perform([bodyPoseRequest], on: pixelBuffer, orientation: orientation)
@@ -215,6 +262,10 @@ class VideoPlayerViewModel: ObservableObject {
             // Update the published property on the main thread
             DispatchQueue.main.async {
                 self.poses = detectedPoses
+                // if this is the very first frame, let the UI know it's ready
+                if !detectedPoses.isEmpty && !self.isVideoReady {
+                    self.isVideoReady = true
+                }
             }
         } catch {
             print("Vision performance error: \(error)")

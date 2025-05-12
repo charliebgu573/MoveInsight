@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    // Sample user data – name typically wouldn’t be localized
+    // Sample user data – name typically wouldn't be localized
     let username = "Zhang Wei"
     
     var body: some View {
@@ -38,8 +38,8 @@ struct HomeView: View {
                     // Match Performance Card
                     PerformanceCard()
                     
-                    // Technicals Section
-                    NavigationLink(destination: Text(LocalizedStringKey("Technicals Detail"))) {
+                    // Technicals Section - Updated to navigate to TechniquesListView
+                    NavigationLink(destination: TechniquesListView()) {
                         SectionCard(title: LocalizedStringKey("Technicals"))
                     }
                     
