@@ -1,159 +1,182 @@
+// MoveInsight/TechniqueAnalysisService.swift
 import Foundation
-import Vision
 import Combine
+import AVFoundation // For URL
+
+// MARK: - Data Structures for Server Communication
+
+struct ServerJointData: Codable {
+    let x: Double
+    let y: Double
+    let z: Double? // Added Z coordinate
+    let confidence: Double?
+}
+
+struct ServerFrameData: Codable {
+    let joints: [String: ServerJointData] // Key is joint name string
+}
+
+struct VideoAnalysisResponse: Codable {
+    let totalFrames: Int
+    let jointDataPerFrame: [ServerFrameData] // Will now contain 3D data
+    let swingAnalysis: [String: Bool]? // Swing analysis remains 2D based
+
+    enum CodingKeys: String, CodingKey {
+        case totalFrames = "total_frames"
+        case jointDataPerFrame = "joint_data_per_frame"
+        case swingAnalysis = "swing_analysis"
+    }
+}
+
+struct TechniqueComparisonRequestData: Codable {
+    let userVideoFrames: [ServerFrameData] // Will now contain 3D data
+    let modelVideoFrames: [ServerFrameData] // Will now contain 3D data
+    let dominantSide: String
+
+    enum CodingKeys: String, CodingKey {
+        case userVideoFrames = "user_video_frames"
+        case modelVideoFrames = "model_video_frames"
+        case dominantSide = "dominant_side"
+    }
+}
+
+// ComparisonResult struct is defined in TechniqueComparisonView.swift
+// It's based on the 2D swing analysis from the server.
+// struct ComparisonResult: Codable { ... }
 
 class TechniqueAnalysisService {
-    private let serverURL = URL(string: "http://115.188.74.78:8000")!
-    
-    struct JointData: Codable {
-        let x: Float
-        let y: Float
-        let confidence: Float
-    }
-    
-    struct FrameJointsData: Codable {
-        let joints: [String: [JointData]]
-        let dominantSide: String
+    // Ensure this URL points to your server's correct IP/domain and port
+    private let serverBaseURL = URL(string: "http://115.188.74.78:8000")!
+
+    // Function to upload a single video and get its joint data (now 3D)
+    func analyzeVideoByUploading(videoURL: URL, dominantSide: String) -> AnyPublisher<VideoAnalysisResponse, Error> {
+        let endpoint = serverBaseURL.appendingPathComponent("/analyze/video_upload/")
         
-        enum CodingKeys: String, CodingKey {
-            case joints
-            case dominantSide = "dominant_side"
-        }
-    }
-    
-    func compareTechniques(
-        userViewModel: VideoPlayerViewModel,
-        modelViewModel: VideoPlayerViewModel,
-        dominantSide: String = "Right"
-    ) -> AnyPublisher<ComparisonResult, Error> {
-        // Use getAllPoses to get accumulated poses over time
-        let userJoints = extractJointsForServer(from: userViewModel.getAllPoses())
-        let modelJoints = extractJointsForServer(from: modelViewModel.getAllPoses())
-        
-        // Debug info
-        print("Sending analysis with \(userViewModel.getAllPoses().count) user frames and \(modelViewModel.getAllPoses().count) model frames")
-        if let firstJoint = userJoints.values.first {
-            print("First joint has \(firstJoint.count) frames of data")
-        }
-        
-        let userFrameJoints = FrameJointsData(joints: userJoints, dominantSide: dominantSide)
-        let modelFrameJoints = FrameJointsData(joints: modelJoints, dominantSide: dominantSide)
-        
-        let comparisonData = ["user": userFrameJoints, "reference": modelFrameJoints]
-        
-        return sendRequest(to: "/analyze/comparison", body: comparisonData)
-    }
-    
-    private func extractJointsForServer(from poses: [[VNHumanBodyPoseObservation.JointName: CGPoint]]) -> [String: [JointData]] {
-        var result: [String: [JointData]] = [:]
-        
-        // Log the number of frames we're processing
-        print("Processing \(poses.count) frames for analysis")
-        
-        // Get all unique joint names that appear across all frames
-        var allJointNames = Set<String>()
-        
-        // Map Vision API joint names to Python expected names
-        let jointNameMapping: [VNHumanBodyPoseObservation.JointName: String] = [
-            .nose: "Nose",
-            .leftShoulder: "LeftShoulder",
-            .rightShoulder: "RightShoulder",
-            .leftElbow: "LeftElbow",
-            .rightElbow: "RightElbow",
-            .leftWrist: "LeftWrist",
-            .rightWrist: "RightWrist",
-            .leftHip: "LeftHip",
-            .rightHip: "RightHip",
-            .leftKnee: "LeftKnee",
-            .rightKnee: "RightKnee",
-            .leftAnkle: "LeftAnkle",
-            .rightAnkle: "RightAnkle"
-        ]
-        
-        // Add special mappings for heel and toe which might not directly map to Vision API
-        let specialMappings: [VNHumanBodyPoseObservation.JointName: [String]] = [
-            .leftAnkle: ["LeftHeel", "LeftToe"],
-            .rightAnkle: ["RightHeel", "RightToe"]
-        ]
-        
-        // Initialize arrays for each joint type
-        for joint in jointNameMapping.values {
-            result[joint] = []
-            allJointNames.insert(joint)
-        }
-        
-        // Add heel and toe (special cases)
-        for specialJoints in specialMappings.values {
-            for joint in specialJoints {
-                result[joint] = []
-                allJointNames.insert(joint)
-            }
-        }
-        
-        // CRITICAL: This is the key fix - Go through EACH FRAME'S poses and extract joint data
-        for frameIndex in 0..<poses.count {
-            let pose = poses[frameIndex]
-            
-            // Add regular joints
-            for (visionJoint, serverJoint) in jointNameMapping {
-                if let point = pose[visionJoint] {
-                    result[serverJoint]?.append(JointData(x: Float(point.x), y: Float(point.y), confidence: 1.0))
-                } else {
-                    // If joint missing in this frame, use placeholder
-                    result[serverJoint]?.append(JointData(x: 0, y: 0, confidence: 0))
-                }
-            }
-            
-            // Handle special cases (heel and toe)
-            for (ankleJoint, specialJoints) in specialMappings {
-                if let anklePoint = pose[ankleJoint] {
-                    // For heel, offset backward from ankle
-                    let heel = CGPoint(x: anklePoint.x, y: anklePoint.y + 0.03)
-                    result[specialJoints[0]]?.append(JointData(x: Float(heel.x), y: Float(heel.y), confidence: 0.8))
-                    
-                    // For toe, offset forward from ankle
-                    let toe = CGPoint(x: anklePoint.x, y: anklePoint.y - 0.05)
-                    result[specialJoints[1]]?.append(JointData(x: Float(toe.x), y: Float(toe.y), confidence: 0.8))
-                } else {
-                    // If ankle not found, add placeholders
-                    for joint in specialJoints {
-                        result[joint]?.append(JointData(x: 0, y: 0, confidence: 0))
-                    }
-                }
-            }
-        }
-        
-        // Debug logging
-        for (joint, frames) in result {
-            print("Joint \(joint): \(frames.count) frames")
-        }
-        
-        // Ensure there's enough data for analysis - minimum 10 frames
-        if let firstJoint = result.values.first, firstJoint.count < 10 {
-            print("WARNING: Not enough frames for analysis. Found only \(firstJoint.count) frames, minimum 10 recommended")
-        }
-        
-        // Filter out empty arrays
-        return result.filter { !$0.value.isEmpty }
-    }
-    
-    private func sendRequest<Input: Encodable, Output: Decodable>(to endpoint: String, body: Input) -> AnyPublisher<Output, Error> {
-        let url = serverURL.appendingPathComponent(endpoint)
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var httpBody = Data()
+        
+        // Add dominant_side part
+        httpBody.append("--\(boundary)\r\n".data(using: .utf8)!)
+        httpBody.append("Content-Disposition: form-data; name=\"dominant_side\"\r\n\r\n".data(using: .utf8)!)
+        httpBody.append("\(dominantSide)\r\n".data(using: .utf8)!)
+        
+        // Add video file part
         do {
-            let encoder = JSONEncoder()
-            request.httpBody = try encoder.encode(body)
+            let videoData = try Data(contentsOf: videoURL)
+            let filename = videoURL.lastPathComponent
+            // Mimetype for mp4. Consider making this more dynamic if other formats are supported.
+            let mimetype = "video/mp4"
+            
+            httpBody.append("--\(boundary)\r\n".data(using: .utf8)!)
+            httpBody.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+            httpBody.append("Content-Type: \(mimetype)\r\n\r\n".data(using: .utf8)!)
+            httpBody.append(videoData)
+            httpBody.append("\r\n".data(using: .utf8)!)
         } catch {
+            print("Error reading video data for upload: \(error)")
             return Fail(error: error).eraseToAnyPublisher()
         }
         
+        httpBody.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = httpBody
+        
+        print("Uploading video for 3D analysis to \(endpoint)... with dominant side: \(dominantSide)")
+
         return URLSession.shared.dataTaskPublisher(for: request)
-            .map(\.data)
-            .decode(type: Output.self, decoder: JSONDecoder())
+            .tryMap { output in
+                guard let httpResponse = output.response as? HTTPURLResponse else {
+                    print("Invalid server response (not HTTPURLResponse)")
+                    throw URLError(.badServerResponse)
+                }
+                print("Server response status code for 3D video upload: \(httpResponse.statusCode)")
+                if !(200...299).contains(httpResponse.statusCode) {
+                    if let responseString = String(data: output.data, encoding: .utf8) {
+                        print("Server error response (3D upload) [Status: \(httpResponse.statusCode)]: \(responseString)")
+                    } else {
+                        print("Server error response (3D upload) [Status: \(httpResponse.statusCode)]: No parsable error body.")
+                    }
+                    throw URLError(.init(rawValue: httpResponse.statusCode), userInfo: [NSLocalizedDescriptionKey: "Server returned status \(httpResponse.statusCode) for 3D video upload"])
+                }
+                // For debugging the raw response:
+                // if let jsonString = String(data: output.data, encoding: .utf8) {
+                //    print("Raw server response (3D upload): \(jsonString.prefix(2000))") // Log more characters
+                // }
+                return output.data
+            }
+            .decode(type: VideoAnalysisResponse.self, decoder: JSONDecoder())
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
+    }
+
+    // Function to send two sets of 3D joint data to the server for comparison.
+    // The server will perform 2D swing analysis on this 3D data.
+    func requestTechniqueComparison(
+        userFrames: [ServerFrameData], // These now contain 3D data
+        modelFrames: [ServerFrameData], // These now contain 3D data
+        dominantSide: String
+    ) -> AnyPublisher<ComparisonResult, Error> { // ComparisonResult is still based on 2D analysis
+        
+        let endpoint = serverBaseURL.appendingPathComponent("/analyze/technique_comparison/")
+        print("Requesting technique comparison (with 3D frame data input) from: \(endpoint)")
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestData = TechniqueComparisonRequestData(
+            userVideoFrames: userFrames,
+            modelVideoFrames: modelFrames,
+            dominantSide: dominantSide
+        )
+
+        do {
+            request.httpBody = try JSONEncoder().encode(requestData)
+            // For debugging the request payload:
+            // if let jsonString = String(data: request.httpBody!, encoding: .utf8) {
+            //      print("Sending 3D comparison request JSON: \(jsonString.prefix(2000))")
+            // }
+        } catch {
+            print("Error encoding 3D comparison request data: \(error)")
+            return Fail(error: error).eraseToAnyPublisher()
+        }
+
+        return URLSession.shared.dataTaskPublisher(for: request)
+            .tryMap { output in
+                guard let httpResponse = output.response as? HTTPURLResponse else {
+                    print("Invalid server response (not HTTPURLResponse) for comparison.")
+                    throw URLError(.badServerResponse)
+                }
+                print("Server response status code for 3D input comparison: \(httpResponse.statusCode)")
+                if !(200...299).contains(httpResponse.statusCode) {
+                    if let responseString = String(data: output.data, encoding: .utf8) {
+                        print("Server error response (3D input comparison) [Status: \(httpResponse.statusCode)]: \(responseString)")
+                    } else {
+                         print("Server error response (3D input comparison) [Status: \(httpResponse.statusCode)]: No parsable error body.")
+                    }
+                    throw URLError(.init(rawValue: httpResponse.statusCode), userInfo: [NSLocalizedDescriptionKey: "Server returned status \(httpResponse.statusCode) for 3D input comparison"])
+                }
+                // For debugging raw comparison response:
+                // if let jsonString = String(data: output.data, encoding: .utf8) {
+                //     print("Raw server response JSON (3D input comparison): \(jsonString)")
+                // }
+                return output.data
+            }
+            .decode(type: ComparisonResult.self, decoder: JSONDecoder()) // ComparisonResult structure itself doesn't change yet
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+}
+
+// Helper extension for appending string to Data
+extension Data {
+    mutating func append(_ string: String) {
+        if let data = string.data(using: .utf8) {
+            append(data)
+        }
     }
 }

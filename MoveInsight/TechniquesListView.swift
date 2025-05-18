@@ -16,38 +16,38 @@ struct TechniquesListView: View {
     // List of all badminton techniques
     let techniques = [
         BadmintonTechnique(
-            name: "Backhand Clear",
-            description: "A clear shot played with the back of the hand facing forward.",
+            name: NSLocalizedString("Backhand Clear", comment: "Technique name"),
+            description: NSLocalizedString("A clear shot played with the back of the hand facing forward.", comment: "Technique description"),
             iconName: "arrow.left.arrow.right",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Backhand Clear")
         ),
         BadmintonTechnique(
-            name: "Underhand Clear",
-            description: "A defensive shot played from below waist height, sending the shuttle high to the back of the opponent's court.",
+            name: NSLocalizedString("Underhand Clear", comment: "Technique name"),
+            description: NSLocalizedString("A defensive shot played from below waist height, sending the shuttle high to the back of the opponent's court.", comment: "Technique description"),
             iconName: "arrow.up.forward",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Underhand Clear")
         ),
         BadmintonTechnique(
-            name: "Overhead Clear",
-            description: "A powerful shot played from above the head, sending the shuttle to the back of the opponent's court.",
+            name: NSLocalizedString("Overhead Clear", comment: "Technique name"),
+            description: NSLocalizedString("A powerful shot played from above the head, sending the shuttle to the back of the opponent's court.", comment: "Technique description"),
             iconName: "arrow.down.forward",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Overhead Clear")
         ),
         BadmintonTechnique(
-            name: "Drop Shot",
-            description: "A gentle shot that just clears the net and drops sharply on the other side.",
+            name: NSLocalizedString("Drop Shot", comment: "Technique name"),
+            description: NSLocalizedString("A gentle shot that just clears the net and drops sharply on the other side.", comment: "Technique description"),
             iconName: "arrow.down",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Drop Shot")
         ),
         BadmintonTechnique(
-            name: "Smash",
-            description: "A powerful overhead shot hit steeply downward into the opponent's court.",
+            name: NSLocalizedString("Smash", comment: "Technique name"),
+            description: NSLocalizedString("A powerful overhead shot hit steeply downward into the opponent's court.", comment: "Technique description"),
             iconName: "bolt.fill",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Smash")
         ),
         BadmintonTechnique(
-            name: "Net Shot",
-            description: "A soft shot played near the net that just clears it and falls close to the net on the other side.",
+            name: NSLocalizedString("Net Shot", comment: "Technique name"),
+            description: NSLocalizedString("A soft shot played near the net that just clears it and falls close to the net on the other side.", comment: "Technique description"),
             iconName: "power.dotted",
             hasModelVideo: ModelVideoLoader.shared.hasModelVideo(for: "Net Shot")
         )
@@ -59,12 +59,12 @@ struct TechniquesListView: View {
             
             ScrollView {
                 VStack(spacing: 16) {
-                    Text("Badminton Techniques")
+                    Text(LocalizedStringKey("Badminton Techniques"))
                         .font(.title)
                         .foregroundColor(ColorManager.textPrimary)
                         .padding(.top, 24)
                     
-                    Text("Select a technique to upload and analyze your form")
+                    Text(LocalizedStringKey("Select a technique to upload and analyze your form"))
                         .font(.subheadline)
                         .foregroundColor(ColorManager.textSecondary)
                         .multilineTextAlignment(.center)
@@ -84,7 +84,7 @@ struct TechniquesListView: View {
                 }
             }
         }
-        .navigationTitle("Techniques")
+        .navigationTitle(LocalizedStringKey("Techniques"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -126,13 +126,5 @@ struct TechniqueCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(ColorManager.cardBackground)
         )
-    }
-}
-
-struct TechniquesListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            TechniquesListView()
-        }
     }
 }

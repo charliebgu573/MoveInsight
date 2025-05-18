@@ -1,829 +1,94 @@
-//import SwiftUI
-//import AVKit
-//
-//struct TechniqueComparisonView: View {
-//    let technique: BadmintonTechnique
-//    let userVideoViewModel: VideoPlayerViewModel
-//    let modelVideoViewModel: VideoPlayerViewModel
-//    
-//    @State private var comparisonMode: ComparisonMode = .sideBySide
-//    @State private var selectedReportTab: ReportTab = .overview
-//    
-//    enum ComparisonMode {
-//        case sideBySide
-//        case overlay3D
-//    }
-//    
-//    enum ReportTab {
-//        case overview
-//        case technical
-//        case smash
-//        case positioning
-//    }
-//    
-//    var body: some View {
-//        ZStack {
-//            ColorManager.background.ignoresSafeArea()
-//            
-//            ScrollView {
-//                VStack(spacing: 24) {
-//                    // Header
-//                    Text("\(technique.name) Comparison")
-//                        .font(.title2)
-//                        .foregroundColor(ColorManager.textPrimary)
-//                        .padding(.top, 16)
-//                    
-//                    // Comparison Mode Selector
-//                    Picker("Comparison Mode", selection: $comparisonMode) {
-//                        Text("Side by Side").tag(ComparisonMode.sideBySide)
-//                        Text("3D Overlay").tag(ComparisonMode.overlay3D)
-//                    }
-//                    .pickerStyle(SegmentedPickerStyle())
-//                    .padding(.horizontal, 20)
-//                    
-//                    // Comparison content based on selected mode
-//                    if comparisonMode == .sideBySide {
-//                        sideBySideComparisonView
-//                    } else {
-//                        overlay3DComparisonView
-//                    }
-//                    
-//                    // Report Tabs
-//                    Picker("Report Type", selection: $selectedReportTab) {
-//                        Text("Overview").tag(ReportTab.overview)
-//                        Text("Technical").tag(ReportTab.technical)
-//                        Text("Smash").tag(ReportTab.smash)
-//                        Text("Positioning").tag(ReportTab.positioning)
-//                    }
-//                    .pickerStyle(SegmentedPickerStyle())
-//                    .padding(.horizontal, 20)
-//                    .padding(.top, 8)
-//                    
-//                    // Analysis and Feedback based on selected tab
-//                    switch selectedReportTab {
-//                    case .overview:
-//                        overviewAnalysisSection
-//                    case .technical:
-//                        technicalAnalysisSection
-//                    case .smash:
-//                        smashAnalysisSection
-//                    case .positioning:
-//                        positioningAnalysisSection
-//                    }
-//                }
-//                .padding(.bottom, 32)
-//            }
-//        }
-//        .navigationTitle("Technique Analysis")
-//        .navigationBarTitleDisplayMode(.inline)
-//        .onAppear {
-//            // Ensure videos play when the view appears
-//            userVideoViewModel.play()
-//            modelVideoViewModel.play()
-//        }
-//        .onDisappear {
-//            // Stop videos when view disappears
-//            userVideoViewModel.pause()
-//            modelVideoViewModel.pause()
-//        }
-//    }
-//    
-//    // Side-by-side comparison view
-//    private var sideBySideComparisonView: some View {
-//        VStack(spacing: 16) {
-//            // Videos
-//            HStack(spacing: 8) {
-//                // Your video
-//                VStack {
-//                    Text("Your Technique")
-//                        .font(.subheadline)
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    VideoPlayerRepresentable(player: userVideoViewModel.player, videoRect: .constant(CGRect()))
-//                        .frame(height: 240)
-//                        .cornerRadius(12)
-//                        .overlay(
-//                            RoundedRectangle(cornerRadius: 12)
-//                                .stroke(Color.blue, lineWidth: 2)
-//                        )
-//                }
-//                .frame(maxWidth: .infinity)
-//                
-//                // Model video
-//                VStack {
-//                    Text("Model Technique")
-//                        .font(.subheadline)
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    VideoPlayerRepresentable(player: modelVideoViewModel.player, videoRect: .constant(CGRect()))
-//                        .frame(height: 240)
-//                        .cornerRadius(12)
-//                        .overlay(
-//                            RoundedRectangle(cornerRadius: 12)
-//                                .stroke(Color.red, lineWidth: 2)
-//                        )
-//                }
-//                .frame(maxWidth: .infinity)
-//            }
-//            .padding(.horizontal, 8)
-//            
-//            // Playback controls
-//            HStack {
-//                Button(action: {
-//                    if userVideoViewModel.isPlaying {
-//                        userVideoViewModel.pause()
-//                        modelVideoViewModel.pause()
-//                    } else {
-//                        userVideoViewModel.play()
-//                        modelVideoViewModel.play()
-//                    }
-//                }) {
-//                    Image(systemName: userVideoViewModel.isPlaying ? "pause.fill" : "play.fill")
-//                        .font(.system(size: 24))
-//                        .foregroundColor(ColorManager.accentColor)
-//                        .frame(width: 44, height: 44)
-//                }
-//                
-//                Button(action: {
-//                    userVideoViewModel.restart()
-//                    modelVideoViewModel.restart()
-//                }) {
-//                    Image(systemName: "arrow.clockwise")
-//                        .font(.system(size: 20))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                        .frame(width: 44, height: 44)
-//                }
-//            }
-//            .padding(.bottom, 8)
-//        }
-//    }
-//    
-//    // 3D overlay comparison view
-//    private var overlay3DComparisonView: some View {
-//        VStack(spacing: 16) {
-//            // 3D View
-//            CombinedVideo3DView(
-//                baseViewModel: userVideoViewModel,
-//                overlayViewModel: modelVideoViewModel
-//            )
-//            .frame(height: 400)
-//            .cornerRadius(12)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 12)
-//                    .stroke(ColorManager.accentColor, lineWidth: 2)
-//            )
-//            .padding(.horizontal, 16)
-//            
-//            Text("Blue skeleton: Your technique | Red skeleton: Model technique")
-//                .font(.caption)
-//                .foregroundColor(ColorManager.textSecondary)
-//        }
-//    }
-//    
-//    // Original Analysis and feedback section now called "Overview"
-//    private var overviewAnalysisSection: some View {
-//        VStack(alignment: .leading, spacing: 20) {
-//            Text("Analysis & Feedback")
-//                .font(.headline)
-//                .foregroundColor(ColorManager.textPrimary)
-//                .padding(.horizontal, 20)
-//            
-//            // Technique score
-//            HStack {
-//                VStack(alignment: .leading, spacing: 4) {
-//                    Text("Overall Technique Score")
-//                        .font(.subheadline)
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("Based on comparing your form to the model technique")
-//                        .font(.caption)
-//                        .foregroundColor(ColorManager.textSecondary)
-//                }
-//                
-//                Spacer()
-//                
-//                ZStack {
-//                    Circle()
-//                        .stroke(ColorManager.accentColor.opacity(0.3), lineWidth: 8)
-//                        .frame(width: 70, height: 70)
-//                    
-//                    Circle()
-//                        .trim(from: 0, to: 0.78) // 78% score
-//                        .stroke(ColorManager.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-//                        .frame(width: 70, height: 70)
-//                        .rotationEffect(.degrees(-90))
-//                    
-//                    Text("78%")
-//                        .font(.system(size: 18, weight: .bold))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                }
-//            }
-//            .padding(.horizontal, 20)
-//            .padding(.vertical, 16)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//            
-//            // Feedback points
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Improvement Areas")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                FeedbackItem(
-//                    title: "Arm Extension",
-//                    description: "Your arm extension is 15% shorter than recommended",
-//                    score: 70
-//                )
-//                
-//                FeedbackItem(
-//                    title: "Follow Through",
-//                    description: "Your follow through motion completes correctly",
-//                    score: 95
-//                )
-//                
-//                FeedbackItem(
-//                    title: "Racket Angle",
-//                    description: "Your racket angle is 10° more vertical than ideal",
-//                    score: 75
-//                )
-//                
-//                FeedbackItem(
-//                    title: "Timing",
-//                    description: "Your timing is well synchronized with the shuttle",
-//                    score: 90
-//                )
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//        }
-//    }
-//    
-//    // NEW: Technical Analysis Section
-//    private var technicalAnalysisSection: some View {
-//        VStack(alignment: .leading, spacing: 20) {
-//            Text("Technical Report")
-//                .font(.headline)
-//                .foregroundColor(ColorManager.textPrimary)
-//                .padding(.horizontal, 20)
-//            
-//            // Technique usage summary
-//            VStack(alignment: .leading, spacing: 16) {
-//                Text("Technique Usage Summary")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                // Column headers
-//                HStack {
-//                    Text("Technique Type")
-//                        .font(.system(size: 14))
-//                        .foregroundColor(ColorManager.textSecondary)
-//                        .frame(width: 180, alignment: .leading)
-//                    
-//                    Spacer()
-//                    
-//                    Text("Uses")
-//                        .font(.system(size: 14))
-//                        .foregroundColor(ColorManager.textSecondary)
-//                        .frame(width: 40, alignment: .center)
-//                    
-//                    Text("Quality")
-//                        .font(.system(size: 14))
-//                        .foregroundColor(ColorManager.textSecondary)
-//                        .frame(width: 80, alignment: .trailing)
-//                }
-//                .padding(.bottom, 8)
-//                
-//                VStack(alignment: .leading, spacing: 12) {
-//                    // Smash stats
-//                    HStack {
-//                        Text("Smash")
-//                            .font(.system(size: 16, weight: .medium))
-//                            .foregroundColor(ColorManager.textPrimary)
-//                            .frame(width: 180, alignment: .leading)
-//                        
-//                        Spacer()
-//                        
-//                        Text("10")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .frame(width: 40, alignment: .center)
-//                        
-//                        Text("40/100")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(.orange)
-//                            .frame(width: 80, alignment: .trailing)
-//                    }
-//                    
-//                    // Forehand High Clear stats
-//                    HStack {
-//                        Text("Forehand High Clear")
-//                            .font(.system(size: 16, weight: .medium))
-//                            .foregroundColor(ColorManager.textPrimary)
-//                            .frame(width: 180, alignment: .leading)
-//                        
-//                        Spacer()
-//                        
-//                        Text("21")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .frame(width: 40, alignment: .center)
-//                        
-//                        Text("60/100")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(.yellow)
-//                            .frame(width: 80, alignment: .trailing)
-//                    }
-//                    
-//                    // Backhand High Clear stats
-//                    HStack {
-//                        Text("Backhand High Clear")
-//                            .font(.system(size: 16, weight: .medium))
-//                            .foregroundColor(ColorManager.textPrimary)
-//                            .frame(width: 180, alignment: .leading)
-//                        
-//                        Spacer()
-//                        
-//                        Text("12")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .frame(width: 40, alignment: .center)
-//                        
-//                        Text("92/100")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(.green)
-//                            .frame(width: 80, alignment: .trailing)
-//                    }
-//                    
-//                    // Drop Shot stats
-//                    HStack {
-//                        Text("Drop Shot")
-//                            .font(.system(size: 16, weight: .medium))
-//                            .foregroundColor(ColorManager.textPrimary)
-//                            .frame(width: 180, alignment: .leading)
-//                        
-//                        Spacer()
-//                        
-//                        Text("12")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .frame(width: 40, alignment: .center)
-//                        
-//                        Text("92/100")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(.green)
-//                            .frame(width: 80, alignment: .trailing)
-//                    }
-//                    
-//                    // Net Shot stats
-//                    HStack {
-//                        Text("Net Shot")
-//                            .font(.system(size: 16, weight: .medium))
-//                            .foregroundColor(ColorManager.textPrimary)
-//                            .frame(width: 180, alignment: .leading)
-//                        
-//                        Spacer()
-//                        
-//                        Text("5")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .frame(width: 40, alignment: .center)
-//                        
-//                        Text("92/100")
-//                            .font(.system(size: 16))
-//                            .foregroundColor(.green)
-//                            .frame(width: 80, alignment: .trailing)
-//                    }
-//                }
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//            
-//            // Summary and recommendations
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Summary & Recommendations")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                VStack(alignment: .leading, spacing: 8) {
-//                    Text("• Only used smash 10 times with 40% success rate. Recommended to increase training frequency.")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Forehand high clear success rate is 60% (21 attempts).")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Backhand high clear, drop shot, net shot, and push technique scores are above average.")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Focus on improving smash power and accuracy through dedicated practice sessions.")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                }
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//        }
-//    }
-//    
-//    // NEW: Smash Analysis Section
-//    private var smashAnalysisSection: some View {
-//        VStack(alignment: .leading, spacing: 20) {
-//            Text("Smash Technique Analysis")
-//                .font(.headline)
-//                .foregroundColor(ColorManager.textPrimary)
-//                .padding(.horizontal, 20)
-//            
-//            // Movement sequence chart
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Velocity Profile")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                Image("velocity_profile_chart") // Would need to be added to assets
-//                    .resizable()
-//                    .scaledToFit()
-//                    .cornerRadius(8)
-//                
-//                Divider()
-//                
-//                // Movement sequence breakdown
-//                VStack(alignment: .leading, spacing: 8) {
-//                    Text("Optimal Movement Sequence:")
-//                        .font(.system(size: 16, weight: .medium))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    HStack(spacing: 0) {
-//                        Text("Upper Body")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(.green)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(Color.green.opacity(0.1))
-//                            .cornerRadius(4)
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 4)
-//                                    .stroke(Color.green, style: StrokeStyle(lineWidth: 1, dash: [3]))
-//                            )
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        Text("Upper Arm")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(.green)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(Color.green.opacity(0.1))
-//                            .cornerRadius(4)
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 4)
-//                                    .stroke(Color.green, style: StrokeStyle(lineWidth: 1, dash: [3]))
-//                            )
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        Text("Forearm")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.accentColor)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(ColorManager.accentColor.opacity(0.1))
-//                            .cornerRadius(4)
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        Text("Wrist")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.accentColor)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(ColorManager.accentColor.opacity(0.1))
-//                            .cornerRadius(4)
-//                    }
-//                    .padding(.vertical, 8)
-//                    
-//                    Text("Your Movement Sequence:")
-//                        .font(.system(size: 16, weight: .medium))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                        .padding(.top, 4)
-//                    
-//                    HStack(spacing: 0) {
-//                        Text("Upper Arm")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(.red)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(Color.red.opacity(0.1))
-//                            .cornerRadius(4)
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 4)
-//                                    .stroke(Color.red, style: StrokeStyle(lineWidth: 1, dash: [3]))
-//                            )
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        Text("Upper Body")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(.red)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(Color.red.opacity(0.1))
-//                            .cornerRadius(4)
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 4)
-//                                    .stroke(Color.red, style: StrokeStyle(lineWidth: 1, dash: [3]))
-//                            )
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        // Missing forearm component - marked in red
-//                        Text("Forearm")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.accentColor)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(ColorManager.accentColor.opacity(0.1))
-//                            .cornerRadius(4)
-//                        
-//                        Image(systemName: "arrow.right")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.horizontal, 4)
-//                        
-//                        Text("Wrist")
-//                            .font(.system(size: 12))
-//                            .foregroundColor(ColorManager.accentColor)
-//                            .padding(.vertical, 4)
-//                            .padding(.horizontal, 8)
-//                            .background(ColorManager.accentColor.opacity(0.1))
-//                            .cornerRadius(4)
-//                    }
-//                    .padding(.vertical, 8)
-//                }
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//            
-//            // Movement analysis
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Power Generation Analysis")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                VStack(alignment: .leading, spacing: 10) {
-//                    Text("Your power generation is sequential but missing key component:")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Missing forearm rotation phase reduces shuttle velocity by 12-15%")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Proper forearm pronation helps transfer energy from elbow to wrist")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• When elbow rotation is at 150°/s, shuttle peak velocity increases by 12-15%")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Focus on adding deliberate forearm rotation before wrist snap for maximum power")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                }
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//        }
-//    }
-//    
-//    // NEW: Positioning Analysis Section
-//    private var positioningAnalysisSection: some View {
-//        VStack(alignment: .leading, spacing: 20) {
-//            Text("Player-Shuttle Positioning")
-//                .font(.headline)
-//                .foregroundColor(ColorManager.textPrimary)
-//                .padding(.horizontal, 20)
-//            
-//            // Positioning measurements
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Measurements")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                HStack(spacing: 20) {
-//                    VStack(alignment: .leading, spacing: 8) {
-//                        Text("Your Height:")
-//                            .font(.system(size: 15))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                        
-//                        HStack {
-//                            Text("2.0m")
-//                                .font(.system(size: 18, weight: .bold))
-//                                .foregroundColor(.red)
-//                            
-//                            Image(systemName: "arrow.down")
-//                                .font(.system(size: 12))
-//                                .foregroundColor(.red)
-//                        }
-//                        
-//                        Text("Recommended:")
-//                            .font(.system(size: 15))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.top, 4)
-//                        
-//                        Text("2.1m")
-//                            .font(.system(size: 18, weight: .bold))
-//                            .foregroundColor(.green)
-//                    }
-//                    
-//                    Divider()
-//                        .frame(width: 1, height: 100)
-//                        .background(ColorManager.textSecondary.opacity(0.3))
-//                    
-//                    VStack(alignment: .leading, spacing: 8) {
-//                        Text("Your Horizontal Distance:")
-//                            .font(.system(size: 15))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                        
-//                        HStack {
-//                            Text("60cm")
-//                                .font(.system(size: 18, weight: .bold))
-//                                .foregroundColor(.red)
-//                            
-//                            Image(systemName: "arrow.right")
-//                                .font(.system(size: 12))
-//                                .foregroundColor(.red)
-//                        }
-//                        
-//                        Text("Recommended:")
-//                            .font(.system(size: 15))
-//                            .foregroundColor(ColorManager.textSecondary)
-//                            .padding(.top, 4)
-//                        
-//                        Text("40-50cm")
-//                            .font(.system(size: 18, weight: .bold))
-//                            .foregroundColor(.green)
-//                    }
-//                }
-//                .padding(.vertical, 8)
-//                
-//                // Positioning diagram
-//                Image("player_shuttle_distance")
-//                    .resizable()
-//                    .scaledToFit()
-//                    .cornerRadius(8)
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//            
-//            // Positioning analysis and recommendations
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text("Analysis & Improvement Suggestions")
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                VStack(alignment: .leading, spacing: 12) {
-//                    Text("Impact of current positioning:")
-//                        .font(.system(size: 15, weight: .medium))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Hitting point too low and forward prevents full arm extension and power generation")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Shuttle contact angle becomes too flat, reducing control and shot quality")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Wrist and shoulder strain increases due to improper power generation mechanics")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("Recommended adjustments:")
-//                        .font(.system(size: 15, weight: .medium))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                        .padding(.top, 8)
-//                    
-//                    Text("• Adjust hitting timing to keep contact point above your body")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Allow natural wrist extension position for optimal power transfer")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                    
-//                    Text("• Decrease horizontal distance to 40-50cm for better leverage and control")
-//                        .font(.system(size: 15))
-//                        .foregroundColor(ColorManager.textPrimary)
-//                }
-//            }
-//            .padding(20)
-//            .background(ColorManager.cardBackground.opacity(0.5))
-//            .cornerRadius(12)
-//            .padding(.horizontal, 20)
-//        }
-//    }
-//}
-//
-//// Feedback item component
-//struct FeedbackItem: View {
-//    let title: String
-//    let description: String
-//    let score: Int
-//    
-//    var body: some View {
-//        HStack(alignment: .center, spacing: 16) {
-//            // Score circle
-//            ZStack {
-//                Circle()
-//                    .fill(scoreColor.opacity(0.2))
-//                    .frame(width: 40, height: 40)
-//                
-//                Text("\(score)%")
-//                    .font(.system(size: 12, weight: .bold))
-//                    .foregroundColor(scoreColor)
-//            }
-//            
-//            // Feedback text
-//            VStack(alignment: .leading, spacing: 4) {
-//                Text(title)
-//                    .font(.subheadline)
-//                    .foregroundColor(ColorManager.textPrimary)
-//                
-//                Text(description)
-//                    .font(.caption)
-//                    .foregroundColor(ColorManager.textSecondary)
-//            }
-//        }
-//    }
-//    
-//    // Color based on the score
-//    private var scoreColor: Color {
-//        if score >= 90 {
-//            return .green
-//        } else if score >= 75 {
-//            return .yellow
-//        } else if score >= 60 {
-//            return .orange
-//        } else {
-//            return .red
-//        }
-//    }
-//}
-
+// MoveInsight/TechniqueComparisonView.swift
 import SwiftUI
 import AVKit
 import Combine
+import SceneKit // Import SceneKit for SceneView3D
+import simd     // For SIMD3 used in poses
 
+// Define ComparisonResult struct to match server's JSON response.
+// This struct holds the results of the 2D swing analysis performed by the server.
+struct ComparisonResult: Codable, Identifiable {
+    // Add Identifiable conformance if needed, e.g., for use in ForEach directly with objects.
+    // If not directly used in a ForEach that requires Identifiable on the struct itself,
+    // `id` can be omitted, but ensure keys in ForEach loops are handled appropriately.
+    let id = UUID() // Provides a unique ID, useful if these results are part of a list.
+    
+    let userScore: Double         // The user's overall technique score.
+    let referenceScore: Double    // The model/reference performer's overall score.
+    let similarity: [String: Bool] // Dictionary indicating if user matched model on specific criteria.
+    let userDetails: [String: Bool]    // Detailed breakdown of user's performance on each criterion.
+    let referenceDetails: [String: Bool] // Detailed breakdown of model's performance.
+
+    // CodingKeys to map Swift property names to JSON keys from the server.
+    enum CodingKeys: String, CodingKey {
+        case userScore = "user_score"           // Maps "user_score" JSON key to userScore.
+        case referenceScore = "reference_score" // Maps "reference_score" JSON key to referenceScore.
+        case similarity                         // Assumes JSON key is "similarity".
+        case userDetails = "user_details"       // Maps "user_details" JSON key to userDetails.
+        case referenceDetails = "reference_details" // Maps "reference_details" JSON key to referenceDetails.
+    }
+}
+
+
+// Example FeedbackItem if not defined elsewhere (for compilation):
+ struct FeedbackItem: View {
+     let title: String
+     let description: String
+     let score: Int // Represents a visual score (e.g., 0-100) for the item color
+
+     var body: some View {
+         HStack(alignment: .center, spacing: 16) {
+             ZStack { // Score circle
+                 Circle().fill(scoreColor.opacity(0.2)).frame(width: 40, height: 40)
+                 Text("\(score)%").font(.system(size: 12, weight: .bold)).foregroundColor(scoreColor)
+             }
+             VStack(alignment: .leading, spacing: 4) { // Feedback text
+                 Text(title).font(.subheadline).foregroundColor(ColorManager.textPrimary)
+                 Text(description).font(.caption).foregroundColor(ColorManager.textSecondary).lineLimit(nil)
+             }
+             Spacer()
+         }
+     }
+     private var scoreColor: Color { // Color based on score
+         if score >= 90 { return .green }
+         else if score >= 75 { return .yellow }
+         else if score >= 60 { return .orange }
+         else { return .red }
+     }
+ }
+
+
+// MARK: - Main Comparison View
 struct TechniqueComparisonView: View {
     let technique: BadmintonTechnique
-    let userVideoViewModel: VideoPlayerViewModel
-    let modelVideoViewModel: VideoPlayerViewModel
+    // ViewModels now manage 3D pose data internally.
+    @ObservedObject var userVideoViewModel: VideoPlayerViewModel
+    @ObservedObject var modelVideoViewModel: VideoPlayerViewModel
     
-    @State private var comparisonMode: ComparisonMode = .sideBySide
-    @State private var selectedReportTab: ReportTab = .overview
+    // UI State
+    @State private var comparisonMode: ComparisonMode = .sideBySide // Default comparison mode
+    @State private var selectedReportTab: ReportTab = .overview     // Default report tab
     
-    // Analysis state
-    @State private var analysisResult: ComparisonResult?
-    @State private var isAnalyzing = false
+    // Analysis Data (ComparisonResult is based on 2D swing analysis from server)
+    @State var analysisResult: ComparisonResult?
+    @State private var isAnalyzing = false // For local loading indicators if re-fetching
     @State private var analysisError: String? = nil
     @State private var cancellables = Set<AnyCancellable>()
+
+    // State for video rectangles, used by the 2D side-by-side overlay.
+    @State private var userVideoActualRect: CGRect = .zero
+    @State private var modelVideoActualRect: CGRect = .zero
+
+    // Delegate for SceneView3D to manage and persist camera state.
+    @StateObject private var sceneDelegate = SceneKitViewDelegate()
     
+    // Enum for switching between comparison modes.
     enum ComparisonMode {
-        case sideBySide
-        case overlay3D
+        case sideBySide  // Shows 2D video players with 2D pose overlays.
+        case overlay3D   // Shows 3D skeletons using SceneView3D.
     }
     
+    // Enum for switching between report tabs.
     enum ReportTab {
         case overview
         case technical
@@ -831,682 +96,312 @@ struct TechniqueComparisonView: View {
     
     var body: some View {
         ZStack {
-            ColorManager.background.ignoresSafeArea()
+            ColorManager.background.ignoresSafeArea() // Apply background color.
             
             ScrollView {
-                VStack(spacing: 24) {
-                    // Header
-                    Text("\(technique.name) Analysis")
-                        .font(.title2)
-                        .foregroundColor(ColorManager.textPrimary)
-                        .padding(.top, 16)
+                VStack(spacing: 20) { // Adjusted spacing
+                    // Header text for the technique being analyzed.
+                    Text(LocalizedStringKey(String(format: NSLocalizedString("%@ Analysis", comment: ""), technique.name)))
+                        .font(.title2).bold().foregroundColor(ColorManager.textPrimary).padding(.top, 16)
                     
-                    // Comparison Mode Selector
+                    // Picker to switch between "Side by Side" (2D) and "3D Overlay" modes.
                     Picker("Comparison Mode", selection: $comparisonMode) {
-                        Text("Side by Side").tag(ComparisonMode.sideBySide)
-                        Text("3D Overlay").tag(ComparisonMode.overlay3D)
+                        Text(LocalizedStringKey("Side by Side")).tag(ComparisonMode.sideBySide)
+                        Text(LocalizedStringKey("3D Overlay")).tag(ComparisonMode.overlay3D)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal, 20)
+                    .pickerStyle(SegmentedPickerStyle()).padding(.horizontal) // Use standard padding
                     
-                    // Comparison content based on selected mode
+                    // Conditional view based on the selected comparison mode.
                     if comparisonMode == .sideBySide {
-                        sideBySideComparisonView
-                    } else {
-                        overlay3DComparisonView
+                        sideBySideComparisonView // Displays 2D video players with overlays.
+                    } else { // .overlay3D
+                        // Display 3D skeletons using SceneView3D.
+                        SceneView3D(
+                            userPose3D: userVideoViewModel.poses, // Pass current 3D pose from ViewModel
+                            modelPose3D: modelVideoViewModel.poses, // Pass current 3D pose from ViewModel
+                            bodyConnections: HumanBodyJoints, // Defined in BodyPoseTypes.swift
+                            sceneDelegate: sceneDelegate        // Pass delegate for camera state
+                        )
+                        .frame(height: 400) // Define a suitable frame for the 3D view.
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(ColorManager.accentColor.opacity(0.5), lineWidth: 1)) // Subtle border
+                        .padding(.horizontal)
+                        .onAppear { // Ensure videos are playing for SceneView3D to receive pose updates.
+                            if !userVideoViewModel.isPlaying { userVideoViewModel.play() }
+                            if !modelVideoViewModel.isPlaying { modelVideoViewModel.play() }
+                        }
+                        // Playback controls are shared for both modes now.
+                        playbackControls().padding(.top, 8)
                     }
                     
-                    // Report Tabs
+                    // Picker for switching between "Overview" and "Technical" report tabs.
                     Picker("Report Type", selection: $selectedReportTab) {
-                        Text("Overview").tag(ReportTab.overview)
-                        Text("Technical").tag(ReportTab.technical)
+                        Text(LocalizedStringKey("Overview")).tag(ReportTab.overview)
+                        Text(LocalizedStringKey("Technical")).tag(ReportTab.technical)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    .pickerStyle(SegmentedPickerStyle()).padding(.horizontal).padding(.top, 10) // Added top padding
                     
-                    // Analysis and Feedback based on selected tab
+                    // Display content based on the selected report tab.
                     switch selectedReportTab {
-                    case .overview:
-                        overviewAnalysisSection
-                    case .technical:
-                        technicalAnalysisSection
+                    case .overview: overviewAnalysisSection
+                    case .technical: technicalAnalysisSection
                     }
                 }
                 .padding(.bottom, 32)
             }
         }
-        .navigationTitle("Technique Analysis")
+        .navigationTitle(LocalizedStringKey("Technique Analysis"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            // Ensure videos play when the view appears
+            // Mute the model/secondary video by default. User's video is unmuted.
+            modelVideoViewModel.player.isMuted = true
+            userVideoViewModel.player.isMuted = false
+            
+            // Auto-play videos when the view appears.
             userVideoViewModel.play()
             modelVideoViewModel.play()
-            
-            // Perform analysis after a short delay to ensure videos are loaded
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                performAnalysis()
+
+            // Log if analysisResult is nil (it should be passed from TechniqueDetailView).
+            if analysisResult == nil && !isAnalyzing {
+                 print("TechniqueComparisonView: analysisResult is nil on appear. Ensure it's passed from parent.")
             }
         }
         .onDisappear {
-            // Stop videos when view disappears
+            // Pause videos and clean up Combine cancellables when the view disappears.
             userVideoViewModel.pause()
             modelVideoViewModel.pause()
-            
-            // Cancel any pending analysis
             cancellables.forEach { $0.cancel() }
             cancellables.removeAll()
         }
     }
     
-    // Side-by-side comparison view
+    // View for side-by-side 2D video comparison with overlays.
     private var sideBySideComparisonView: some View {
-        VStack(spacing: 16) {
-            // Videos
+        VStack(spacing: 12) { // Adjusted spacing
             HStack(spacing: 8) {
-                // Your video
-                VStack {
-                    Text("Your Technique")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    VideoPlayerRepresentable(player: userVideoViewModel.player, videoRect: .constant(CGRect()))
-                        .frame(height: 240)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue, lineWidth: 2)
-                        )
-                }
-                .frame(maxWidth: .infinity)
-                
-                // Model video
-                VStack {
-                    Text("Model Technique")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    VideoPlayerRepresentable(player: modelVideoViewModel.player, videoRect: .constant(CGRect()))
-                        .frame(height: 240)
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.red, lineWidth: 2)
-                        )
-                }
-                .frame(maxWidth: .infinity)
+                // User's video player card.
+                videoPlayerCard(
+                    title: LocalizedStringKey("Your Technique"),
+                    viewModel: userVideoViewModel,
+                    borderColor: .blue,
+                    videoActualRectBinding: $userVideoActualRect // Binding for video rect
+                )
+                // Model's video player card.
+                videoPlayerCard(
+                    title: LocalizedStringKey("Model Technique"),
+                    viewModel: modelVideoViewModel,
+                    borderColor: .red,
+                    videoActualRectBinding: $modelVideoActualRect // Binding for video rect
+                )
             }
-            .padding(.horizontal, 8)
-            
-            // Playback controls
-            HStack {
-                Button(action: {
-                    if userVideoViewModel.isPlaying {
-                        userVideoViewModel.pause()
-                        modelVideoViewModel.pause()
-                    } else {
-                        userVideoViewModel.play()
-                        modelVideoViewModel.play()
-                    }
-                }) {
-                    Image(systemName: userVideoViewModel.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(ColorManager.accentColor)
-                        .frame(width: 44, height: 44)
-                }
-                
-                Button(action: {
-                    userVideoViewModel.restart()
-                    modelVideoViewModel.restart()
-                }) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 20))
-                        .foregroundColor(ColorManager.textPrimary)
-                        .frame(width: 44, height: 44)
-                }
-            }
-            .padding(.bottom, 8)
+            .padding(.horizontal) // Use standard padding
+            playbackControls().padding(.top, 8) // Shared playback controls
         }
     }
-    
-    // 3D overlay comparison view
-    private var overlay3DComparisonView: some View {
-        VStack(spacing: 16) {
-            // 3D View
-            CombinedVideo3DView(
-                baseViewModel: userVideoViewModel,
-                overlayViewModel: modelVideoViewModel
-            )
-            .frame(height: 400)
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(ColorManager.accentColor, lineWidth: 2)
-            )
-            .padding(.horizontal, 16)
-            
-            Text("Blue skeleton: Your technique | Red skeleton: Model technique")
-                .font(.caption)
-                .foregroundColor(ColorManager.textSecondary)
+
+    // Helper to create a single video player card with its 2D overlay.
+    private func videoPlayerCard(
+        title: LocalizedStringKey,
+        viewModel: VideoPlayerViewModel, // ViewModel now contains 3D poses
+        borderColor: Color,
+        videoActualRectBinding: Binding<CGRect> // Binding for the video's actual rect
+    ) -> some View {
+        VStack(spacing: 4) { // Reduced spacing
+            Text(title).font(.caption).padding(.bottom, 2).foregroundColor(ColorManager.textPrimary)
+            VideoPlayerRepresentable(player: viewModel.player, videoRect: videoActualRectBinding)
+                .frame(height: 250) // Adjusted height
+                .cornerRadius(10) // Slightly less corner radius
+                .overlay(
+                    // PoseOverlayView takes 3D poses from viewModel and renders a 2D projection
+                    // using the videoActualRect for correct scaling and positioning.
+                    PoseOverlayView(viewModel: viewModel, videoActualRect: videoActualRectBinding.wrappedValue)
+                )
+                .background(Color.black) // Ensure black bars for letter/pillarboxing.
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(borderColor, lineWidth: 1.5)) // Adjusted border
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    // Shared playback controls for both 2D and 3D modes.
+    private func playbackControls() -> some View {
+        HStack(spacing: 25) { // Increased spacing for better touch targets
+            // Restart button: restarts both videos and plays them.
+            Button(action: {
+                userVideoViewModel.restart(); modelVideoViewModel.restart()
+                userVideoViewModel.play(); modelVideoViewModel.play()
+            }) {
+                Image(systemName: "backward.end.fill")
+                    .imageScale(.large) // Make icon larger
+            }
+            
+            // Play/Pause button: toggles playback for both videos.
+            Button(action: {
+                if userVideoViewModel.isPlaying {
+                    userVideoViewModel.pause(); modelVideoViewModel.pause()
+                } else {
+                    userVideoViewModel.play(); modelVideoViewModel.play()
+                }
+            }) {
+                Image(systemName: userVideoViewModel.isPlaying ? "pause.fill" : "play.fill")
+                    .imageScale(.large) // Make icon larger
+            }
+        }
+        .font(.title2) // Apply font to the HStack for consistent icon sizing if not overridden by imageScale
+        .padding(.vertical, 8) // Add some vertical padding
+        .foregroundColor(ColorManager.accentColor)
     }
     
-    // Overview Analysis Section - focused on server results
+    // MARK: - Analysis Display Sections
+    // These sections display the 2D swing analysis results from `analysisResult`.
+    // Their structure and content remain largely the same as before the 3D update,
+    // as `ComparisonResult` is still based on 2D analysis.
+
     private var overviewAnalysisSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Analysis & Feedback")
-                .font(.headline)
-                .foregroundColor(ColorManager.textPrimary)
-                .padding(.horizontal, 20)
+        VStack(alignment: .leading, spacing: 16) { // Adjusted spacing
+            Text(LocalizedStringKey("Analysis & Feedback")).font(.headline).foregroundColor(ColorManager.textPrimary)
             
-            if isAnalyzing {
-                // Loading state
-                HStack {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor))
-                            .scaleEffect(1.5)
-                        
-                        Text("Analyzing your technique...")
-                            .font(.subheadline)
-                            .foregroundColor(ColorManager.textPrimary)
-                        
-                        Text("Comparing with model performance")
-                            .font(.caption)
-                            .foregroundColor(ColorManager.textSecondary)
-                    }
-                    .padding(.vertical, 40)
-                    Spacer()
-                }
-            } else if let error = analysisError {
-                // Error state
-                VStack(alignment: .center, spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(.orange)
-                    
-                    Text("Analysis Error")
-                        .font(.headline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    Text(error)
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textSecondary)
-                        .multilineTextAlignment(.center)
-                    
-                    Button(action: {
-                        performAnalysis()
-                    }) {
-                        Text("Retry Analysis")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(ColorManager.accentColor)
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 8)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 30)
-                .padding(.horizontal, 20)
-                .background(ColorManager.cardBackground.opacity(0.5))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-            } else if let result = analysisResult {
-                // Success state - show technique score
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Overall Technique Score")
-                            .font(.subheadline)
-                            .foregroundColor(ColorManager.textPrimary)
-                        
-                        Text("Based on comparing your form to the model technique")
-                            .font(.caption)
-                            .foregroundColor(ColorManager.textSecondary)
-                    }
-                    
-                    Spacer()
-                    
-                    ZStack {
-                        Circle()
-                            .stroke(ColorManager.accentColor.opacity(0.3), lineWidth: 8)
-                            .frame(width: 70, height: 70)
-                        
-                        Circle()
-                            .trim(from: 0, to: CGFloat(result.userScore / 100.0))
-                            .stroke(ColorManager.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                            .frame(width: 70, height: 70)
-                            .rotationEffect(.degrees(-90))
-                        
-                        Text("\(Int(result.userScore))%")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(ColorManager.textPrimary)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(ColorManager.cardBackground.opacity(0.5))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-                
-                // Feedback points based on the analysis
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Technique Analysis")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    ForEach(Array(result.userDetails.keys.sorted()), id: \.self) { key in
-                        let passed = result.userDetails[key] ?? false
-                        let displayName = formatRuleName(key)
-                        let description = getDescription(for: key, passed: passed)
-                        
-                        FeedbackItem(
-                            title: displayName,
-                            description: description,
-                            score: passed ? 95 : 65
-                        )
-                    }
-                }
-                .padding(20)
-                .background(ColorManager.cardBackground.opacity(0.5))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-            } else {
-                // Initial state - no analysis yet
-                Button(action: {
-                    performAnalysis()
-                }) {
-                    HStack {
-                        Image(systemName: "waveform.path")
-                            .font(.system(size: 20))
-                        Text("Analyze Technique")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(ColorManager.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                }
-                .padding(.horizontal, 20)
-            }
-        }
+            if isAnalyzing { loadingView(message: LocalizedStringKey("Analyzing your technique...")) }
+            else if let error = analysisError { errorDisplayView(error) }
+            else if let result = analysisResult { // Now `result` is of type ComparisonResult
+                techniqueScoreView(score: result.userScore, title: LocalizedStringKey("Overall Technique Score"), subtitle: LocalizedStringKey("Compared to model performance"))
+                feedbackDetailsView(details: result.userDetails) // userDetails from ComparisonResult
+            } else { noAnalysisDataView() }
+        }.padding(.horizontal)
     }
-    
-    // Technical Analysis Section
+
     private var technicalAnalysisSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Technical Report")
-                .font(.headline)
-                .foregroundColor(ColorManager.textPrimary)
-                .padding(.horizontal, 20)
-            
-            if let result = analysisResult {
-                // Display comparison details
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Comparison with Model")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    HStack(spacing: 20) {
-                        // Your score
-                        VStack(alignment: .center, spacing: 8) {
-                            Text("Your Score")
-                                .font(.caption)
-                                .foregroundColor(ColorManager.textSecondary)
-                            
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.blue.opacity(0.3), lineWidth: 8)
-                                    .frame(width: 70, height: 70)
-                                
-                                Circle()
-                                    .trim(from: 0, to: CGFloat(result.userScore / 100.0))
-                                    .stroke(Color.blue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                                    .frame(width: 70, height: 70)
-                                    .rotationEffect(.degrees(-90))
-                                
-                                Text("\(Int(result.userScore))%")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(ColorManager.textPrimary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        
-                        // Model score
-                        VStack(alignment: .center, spacing: 8) {
-                            Text("Model Score")
-                                .font(.caption)
-                                .foregroundColor(ColorManager.textSecondary)
-                            
-                            ZStack {
-                                Circle()
-                                    .stroke(Color.red.opacity(0.3), lineWidth: 8)
-                                    .frame(width: 70, height: 70)
-                                
-                                Circle()
-                                    .trim(from: 0, to: CGFloat(result.referenceScore / 100.0))
-                                    .stroke(Color.red, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                                    .frame(width: 70, height: 70)
-                                    .rotationEffect(.degrees(-90))
-                                
-                                Text("\(Int(result.referenceScore))%")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(ColorManager.textPrimary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .padding(.top, 10)
-                    
-                    Divider()
-                        .padding(.vertical, 10)
-                    
-                    // Similarity analysis
-                    Text("Technical Elements")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    // Column headers
-                    HStack {
-                        Text("Technique Element")
-                            .font(.system(size: 14))
-                            .foregroundColor(ColorManager.textSecondary)
-                            .frame(width: 180, alignment: .leading)
-                        
-                        Spacer()
-                        
-                        Text("Your Performance")
-                            .font(.system(size: 14))
-                            .foregroundColor(ColorManager.textSecondary)
-                            .frame(width: 140, alignment: .trailing)
-                    }
-                    .padding(.bottom, 8)
-                    
-                    // List of technique elements
-                    ForEach(Array(result.userDetails.keys.sorted()), id: \.self) { key in
-                        let userPassed = result.userDetails[key] ?? false
-                        let referencePassed = result.referenceDetails[key] ?? false
-                        let similar = result.similarity[key] ?? false
-                        
-                        HStack {
-                            Text(formatRuleName(key))
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(ColorManager.textPrimary)
-                                .frame(width: 180, alignment: .leading)
-                                .lineLimit(1)
-                            
-                            Spacer()
-                            
-                            HStack(spacing: 8) {
-                                Image(systemName: userPassed ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                    .foregroundColor(userPassed ? .green : .orange)
-                                
-                                Text(userPassed ? "Correct" : "Needs Work")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(userPassed ? .green : .orange)
-                            }
-                            .frame(width: 140, alignment: .trailing)
-                        }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 4)
-                        .background(similar ? Color.clear : ColorManager.cardBackground.opacity(0.3))
-                        .cornerRadius(8)
-                    }
-                }
-                .padding(20)
-                .background(ColorManager.cardBackground.opacity(0.5))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-                
-                // Improvement suggestions
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Improvement Areas")
-                        .font(.subheadline)
-                        .foregroundColor(ColorManager.textPrimary)
-                    
-                    let improvementAreas = result.userDetails.filter { !$0.value }.keys.sorted()
-                    
-                    if improvementAreas.isEmpty {
-                        Text("All technical elements performed correctly! Great job!")
-                            .font(.system(size: 15))
-                            .foregroundColor(.green)
-                            .padding(.vertical, 8)
-                    } else {
-                        ForEach(improvementAreas, id: \.self) { key in
-                            Text("• \(getDescription(for: key, passed: false))")
-                                .font(.system(size: 15))
-                                .foregroundColor(ColorManager.textPrimary)
-                                .padding(.vertical, 4)
-                        }
-                    }
-                }
-                .padding(20)
-                .background(ColorManager.cardBackground.opacity(0.5))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-            } else if isAnalyzing {
-                // Loading state for technical tab
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor))
-                    Spacer()
-                }
-                .padding(.vertical, 50)
-            } else {
-                // Prompt to analyze
-                HStack {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 24))
-                            .foregroundColor(ColorManager.textSecondary)
-                        
-                        Text("Please analyze your technique first")
-                            .font(.subheadline)
-                            .foregroundColor(ColorManager.textSecondary)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 50)
+        VStack(alignment: .leading, spacing: 16) { // Adjusted spacing
+            Text(LocalizedStringKey("Technical Report")).font(.headline).foregroundColor(ColorManager.textPrimary)
+
+            if isAnalyzing { loadingView(message: LocalizedStringKey("Loading technical report...")) }
+            else if let error = analysisError { errorDisplayView(error) }
+            else if let result = analysisResult { // Now `result` is of type ComparisonResult
+                scoresComparisonView(userScore: result.userScore, referenceScore: result.referenceScore)
+                technicalElementsView(similarity: result.similarity, userDetails: result.userDetails, referenceDetails: result.referenceDetails)
+                improvementSuggestionsView(userDetails: result.userDetails)
+            } else { noAnalysisDataView(message: LocalizedStringKey("Technical analysis data not available.")) }
+        }.padding(.horizontal)
+    }
+    
+    // MARK: - Helper Views for Analysis Display (Implementations assumed from previous context or standard UI)
+    private func loadingView(message: LocalizedStringKey) -> some View {
+        HStack { Spacer(); VStack(spacing: 16) {
+            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor)).scaleEffect(1.5)
+            Text(message).font(.subheadline).foregroundColor(ColorManager.textPrimary)
+        }.padding(.vertical, 40); Spacer() }
+    }
+    private func errorDisplayView(_ error: String) -> some View {
+        VStack(alignment: .center, spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 40)).foregroundColor(.orange)
+            Text(LocalizedStringKey("Analysis Error")).font(.headline).foregroundColor(ColorManager.textPrimary)
+            Text(error).font(.subheadline).foregroundColor(ColorManager.textSecondary).multilineTextAlignment(.center).padding(.horizontal)
+            Button(LocalizedStringKey("Retry")) {
+                print("Retry tapped. Implement re-fetch logic if this view is responsible.")
             }
+            .padding().buttonStyle(.borderedProminent).tint(ColorManager.accentColor)
         }
+        .frame(maxWidth: .infinity).padding(20).background(ColorManager.cardBackground.opacity(0.7)).cornerRadius(12).padding(.horizontal)
     }
-    
-    // MARK: - Analysis Service Methods
-    
-    // Perform the analysis with server
-    private func performAnalysis() {
-        // Clear any previous results and cancel ongoing operations
-        analysisResult = nil
-        analysisError = nil
-        isAnalyzing = true
-        cancellables.forEach { $0.cancel() } // Cancel previous Combine subscriptions
-        cancellables.removeAll()
-
-        // 1. Clear previously accumulated poses from both view models
-        userVideoViewModel.clearAccumulatedPoses()
-        modelVideoViewModel.clearAccumulatedPoses()
-
-        // 2. Restart both videos. The restart() method internally calls play().
-        userVideoViewModel.restart()
-        modelVideoViewModel.restart()
-        
-        print("performAnalysis: Called restart() on both ViewModels. Waiting for them to become ready.")
-
-        // 3. Wait for both VideoPlayerViewModels to signal they are ready.
-        Publishers.CombineLatest(userVideoViewModel.$isVideoReady, modelVideoViewModel.$isVideoReady)
-            .filter { userReady, modelReady in
-                print("Readiness check: UserVM isReady=\(userReady), ModelVM isReady=\(modelReady)")
-                return userReady && modelReady
+    private func noAnalysisDataView(message: LocalizedStringKey = LocalizedStringKey("Analysis data not available. Please ensure the video was processed.")) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "info.circle").font(.largeTitle).foregroundColor(ColorManager.textSecondary)
+            Text(message).font(.subheadline).foregroundColor(ColorManager.textSecondary)
+                .padding(.horizontal, 20).multilineTextAlignment(.center)
+            Button(LocalizedStringKey("Refresh Analysis")) {
+                print("Refresh Analysis Tapped. Implement re-fetch logic.")
             }
-            .first()
-            .receive(on: DispatchQueue.main)
-            .sink(receiveCompletion: { completion in // No [weak self]
-                if case .failure(let error) = completion {
-                    print("Error while waiting for ViewModels to become ready: \(error)")
-                    // self still refers to the struct instance here
-                    self.isAnalyzing = false
-                    self.analysisError = "Failed to prepare videos for analysis. Please try again."
-                }
-            }, receiveValue: { (userIsReady, modelIsReady) in // No [weak self]
-                // self still refers to the struct instance here
-                print("Both ViewModels are now ready (User: \(userIsReady), Model: \(modelIsReady)). Proceeding with frame accumulation delay.")
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                    print("Frame accumulation delay ended. Pausing videos prior to analysis.")
-                    self.userVideoViewModel.pause()
-                    self.modelVideoViewModel.pause()
-
-                    guard self.isAnalyzing else {
-                        print("Analysis was cancelled or superseded during accumulation delay.")
-                        return
-                    }
-
-                    print("Initiating technique comparison with the analysis service.")
-                    let service = TechniqueAnalysisService()
-                    service.compareTechniques(
-                        userViewModel: self.userVideoViewModel,
-                        modelViewModel: self.modelVideoViewModel
-                    )
-                    .sink(
-                        receiveCompletion: { serviceCompletionStatus in // No [weak self]
-                            // self still refers to the struct instance here
-                            self.isAnalyzing = false
-
-                            if case let .failure(error) = serviceCompletionStatus {
-                                self.analysisError = error.localizedDescription
-                                print("Technique analysis service returned an error: \(error.localizedDescription)")
-                            }
-                        },
-                        receiveValue: { result in // No [weak self]
-                            // self still refers to the struct instance here
-                            self.analysisResult = result
-                            print("Technique analysis successful: User score \(result.userScore)%, Reference score \(result.referenceScore)%")
-                        }
-                    )
-                    .store(in: &self.cancellables) // self.cancellables is fine
-                }
-            })
-            .store(in: &cancellables) // cancellables is a @State var, so self.cancellables is fine
-    }
-    
-    // Helper functions to format rule names and descriptions
-    private func formatRuleName(_ rule: String) -> String {
-        let names: [String: String] = [
-            "shoulder_abduction": "Shoulder Position",
-            "elbow_flexion": "Elbow Flexion",
-            "elbow_lower": "Elbow Height",
-            "foot_direction_aligned": "Foot Alignment",
-            "proximal_to_distal_sequence": "Power Sequence",
-            "hip_forward_shift": "Hip Forward Movement",
-            "trunk_rotation_completed": "Trunk Rotation"
-        ]
-        return names[rule] ?? rule.replacingOccurrences(of: "_", with: " ").capitalized
-    }
-    
-    private func getDescription(for rule: String, passed: Bool) -> String {
-        let descriptions: [String: (pass: String, fail: String)] = [
-            "shoulder_abduction": (
-                pass: "Great shoulder abduction angle between 60-90°",
-                fail: "Improve shoulder abduction angle (aim for 60-90°)"
-            ),
-            "elbow_flexion": (
-                pass: "Good elbow flexion, less than 90°",
-                fail: "Increase elbow flexion, aim for angle less than 90°"
-            ),
-            "elbow_lower": (
-                pass: "Correct elbow position, racket arm lower than non-racket arm",
-                fail: "Lower your racket arm elbow below your non-racket arm"
-            ),
-            "foot_direction_aligned": (
-                pass: "Proper foot alignment provides good stability",
-                fail: "Align your feet in the same direction for better balance"
-            ),
-            "proximal_to_distal_sequence": (
-                pass: "Excellent power generation sequence",
-                fail: "Improve your swing sequence: shoulder→elbow→wrist"
-            ),
-            "hip_forward_shift": (
-                pass: "Good hip forward movement for power transfer",
-                fail: "Shift your hips forward during the swing for more power"
-            ),
-            "trunk_rotation_completed": (
-                pass: "Full trunk rotation generates maximum power",
-                fail: "Complete your trunk rotation for improved power generation"
-            )
-        ]
-        
-        if let description = descriptions[rule] {
-            return passed ? description.pass : description.fail
+            .padding().buttonStyle(.bordered).tint(ColorManager.accentColor)
         }
-        return passed ? "Technique element performed correctly" : "This technique element needs improvement"
+        .padding(.vertical, 30).frame(maxWidth: .infinity)
     }
-}
-
-// MARK: - Supporting Structures
-
-// Feedback item component
-struct FeedbackItem: View {
-    let title: String
-    let description: String
-    let score: Int
-    
-    var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            // Score circle
-            ZStack {
-                Circle()
-                    .fill(scoreColor.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                
-                Text("\(score)%")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(scoreColor)
-            }
-            
-            // Feedback text
+    private func techniqueScoreView(score: Double, title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
+        HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundColor(ColorManager.textPrimary)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(ColorManager.textSecondary)
+                Text(title).font(.subheadline).fontWeight(.medium).foregroundColor(ColorManager.textPrimary)
+                Text(subtitle).font(.caption).foregroundColor(ColorManager.textSecondary)
+            }
+            Spacer()
+            scoreRingView(score: score, color: ColorManager.accentColor, size: 70)
+        }
+        .padding().background(ColorManager.cardBackground.opacity(0.8)).cornerRadius(10)
+    }
+    private func feedbackDetailsView(details: [String: Bool]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(LocalizedStringKey("Key Technique Elements")).font(.subheadline).fontWeight(.medium).foregroundColor(ColorManager.textPrimary)
+            ForEach(Array(details.keys.sorted()), id: \.self) { key in
+                let passed = details[key] ?? false
+                FeedbackItem(title: formatRuleName(key), description: getDescription(for: key, passed: passed), score: passed ? 95 : 65 )
             }
         }
+        .padding().background(ColorManager.cardBackground.opacity(0.8)).cornerRadius(10)
     }
-    
-    // Color based on the score
-    private var scoreColor: Color {
-        if score >= 90 {
-            return .green
-        } else if score >= 75 {
-            return .yellow
-        } else if score >= 60 {
-            return .orange
-        } else {
-            return .red
+    private func scoresComparisonView(userScore: Double, referenceScore: Double) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(LocalizedStringKey("Scores: You vs. Model")).font(.subheadline).fontWeight(.medium).foregroundColor(ColorManager.textPrimary)
+            HStack(spacing: 16) {
+                scoreRingView(title: LocalizedStringKey("Your Score"), score: userScore, color: .blue, size: 65)
+                scoreRingView(title: LocalizedStringKey("Model Score"), score: referenceScore, color: .red, size: 65)
+            }.frame(maxWidth: .infinity)
         }
+        .padding().background(ColorManager.cardBackground.opacity(0.8)).cornerRadius(10)
     }
-}
+    private func scoreRingView(title: LocalizedStringKey? = nil, score: Double, color: Color, size: CGFloat) -> some View {
+        VStack(alignment: .center, spacing: 6) {
+            if let title = title { Text(title).font(.caption2).foregroundColor(ColorManager.textSecondary) }
+            ZStack {
+                Circle().stroke(color.opacity(0.25), lineWidth: size * 0.1).frame(width: size, height: size)
+                Circle().trim(from: 0, to: CGFloat(score / 100.0))
+                    .stroke(color, style: StrokeStyle(lineWidth: size * 0.1, lineCap: .round))
+                    .frame(width: size, height: size).rotationEffect(.degrees(-90))
+                Text("\(Int(score))").font(.system(size: size * 0.3, weight: .semibold)).foregroundColor(ColorManager.textPrimary)
+            }
+        }.frame(maxWidth: .infinity)
+    }
+    private func technicalElementsView(similarity: [String: Bool], userDetails: [String: Bool], referenceDetails: [String: Bool]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(LocalizedStringKey("Technical Elements Breakdown")).font(.subheadline).fontWeight(.medium).foregroundColor(ColorManager.textPrimary)
+            HStack {
+                Text(LocalizedStringKey("Element")).font(.caption.weight(.semibold)).foregroundColor(ColorManager.textSecondary).frame(maxWidth: .infinity, alignment: .leading)
+                Text(LocalizedStringKey("You")).font(.caption.weight(.semibold)).foregroundColor(ColorManager.textSecondary).frame(width: 50, alignment: .center)
+                Text(LocalizedStringKey("Model")).font(.caption.weight(.semibold)).foregroundColor(ColorManager.textSecondary).frame(width: 50, alignment: .center)
+            }.padding(.bottom, 2)
+            ForEach(Array(similarity.keys.sorted()), id: \.self) { key in
+                let userPassed = userDetails[key] ?? false; let modelPassed = referenceDetails[key] ?? false
+                HStack {
+                    Text(formatRuleName(key)).font(.caption).foregroundColor(ColorManager.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: userPassed ? "checkmark.circle.fill" : "xmark.circle.fill").foregroundColor(userPassed ? .green : .orange).frame(width: 50, alignment: .center)
+                    Image(systemName: modelPassed ? "checkmark.circle.fill" : "xmark.circle.fill").foregroundColor(modelPassed ? .green : .orange).frame(width: 50, alignment: .center)
+                }.padding(.vertical, 4).background((userPassed == modelPassed) ? Color.clear : Color.yellow.opacity(0.1)).cornerRadius(3)
+            }
+        }
+        .padding().background(ColorManager.cardBackground.opacity(0.8)).cornerRadius(10)
+    }
+    private func improvementSuggestionsView(userDetails: [String: Bool]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(LocalizedStringKey("Improvement Suggestions")).font(.subheadline).fontWeight(.medium).foregroundColor(ColorManager.textPrimary)
+            let improvementAreas = userDetails.filter { !$0.value }.keys.sorted()
+            if improvementAreas.isEmpty {
+                Text(LocalizedStringKey("Excellent! All key technical elements are performed correctly.")).font(.caption).foregroundColor(.green).padding(.vertical, 4)
+            } else {
+                ForEach(improvementAreas, id: \.self) { key in
+                    HStack(alignment: .top) {
+                        Image(systemName: "exclamationmark.circle").foregroundColor(.orange).font(.caption)
+                        Text(getDescription(for: key, passed: false)).font(.caption).foregroundColor(ColorManager.textPrimary)
+                    }
+                }
+            }
+        }
+        .padding().background(ColorManager.cardBackground.opacity(0.8)).cornerRadius(10)
+    }
 
-// Data structure for results
-struct ComparisonResult: Codable {
-    let userScore: Double
-    let referenceScore: Double
-    let similarity: [String: Bool]
-    let userDetails: [String: Bool]
-    let referenceDetails: [String: Bool]
-    
-    enum CodingKeys: String, CodingKey {
-        case userScore = "user_score"
-        case referenceScore = "reference_score"
-        case similarity
-        case userDetails = "user_details"
-        case referenceDetails = "reference_details"
+    // Helper functions for formatting text.
+    private func formatRuleName(_ rule: String) -> String {
+        let localizedKey = NSLocalizedString(rule, comment: "Technical term from server (e.g., shoulder_abduction)")
+        return localizedKey == rule ? rule.replacingOccurrences(of: "_", with: " ").capitalized : localizedKey
+    }
+    private func getDescription(for rule: String, passed: Bool) -> String {
+        let baseMessage = formatRuleName(rule)
+        let formatKey = passed ? "%@: Well done!" : "%@: Focus on improving this aspect. Check tutorials for guidance."
+        return String(format: NSLocalizedString(formatKey, comment: "Feedback string format"), baseMessage)
     }
 }

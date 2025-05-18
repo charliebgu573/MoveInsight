@@ -51,3 +51,101 @@
 // Details screens
 "Technicals Detail" = "Technicals Detail";
 "Training Goals Detail" = "Training Goals Detail";
+
+// Techniques List View
+"Badminton Techniques" = "Badminton Techniques";
+"Select a technique to upload and analyze your form" = "Select a technique to upload and analyze your form";
+"Techniques" = "Techniques";
+
+// Technique Names
+"Backhand Clear" = "Backhand Clear";
+"Underhand Clear" = "Underhand Clear";
+"Overhead Clear" = "Overhead Clear";
+"Drop Shot" = "Drop Shot";
+"Smash" = "Smash";
+"Net Shot" = "Net Shot";
+
+// Technique Descriptions
+"A clear shot played with the back of the hand facing forward." = "A clear shot played with the back of the hand facing forward.";
+"A defensive shot played from below waist height, sending the shuttle high to the back of the opponent's court." = "A defensive shot played from below waist height, sending the shuttle high to the back of the opponent's court.";
+"A powerful shot played from above the head, sending the shuttle to the back of the opponent's court." = "A powerful shot played from above the head, sending the shuttle to the back of the opponent's court.";
+"A gentle shot that just clears the net and drops sharply on the other side." = "A gentle shot that just clears the net and drops sharply on the other side.";
+"A powerful overhead shot hit steeply downward into the opponent's court." = "A powerful overhead shot hit steeply downward into the opponent's court.";
+"A soft shot played near the net that just clears it and falls close to the net on the other side." = "A soft shot played near the net that just clears it and falls close to the net on the other side.";
+
+// Technique Detail View
+"Upload Your %@ Video" = "Upload Your %@ Video";
+"Upload Second Video for Comparison" = "Upload Second Video for Comparison";
+"Your Analyzed Video" = "Your Analyzed Video";
+"Next Steps" = "Next Steps";
+"Compare with Model Video" = "Compare with Model Video";
+"Re-upload Primary Video" = "Re-upload Primary Video";
+"Key Points for %@" = "Key Points for %@";
+"Start with proper stance, feet shoulder-width apart." = "Start with proper stance, feet shoulder-width apart.";
+"Grip the racket with a relaxed, comfortable hold." = "Grip the racket with a relaxed, comfortable hold.";
+"Maintain balance throughout the motion." = "Maintain balance throughout the motion.";
+"Keep your eye on the shuttle at all times." = "Keep your eye on the shuttle at all times.";
+"Follow through with your swing for better control." = "Follow through with your swing for better control.";
+"Processing video..." = "Processing video...";
+"Uploading & Analyzing Primary Video..." = "Uploading & Analyzing Primary Video...";
+"Uploading & Analyzing Comparison Video..." = "Uploading & Analyzing Comparison Video...";
+"Processing Model Video..." = "Processing Model Video...";
+"Error" = "Error";
+"Try Upload Again" = "Try Upload Again";
+
+// Technique Video Upload View
+"Upload Comparison Video" = "Upload Comparison Video";
+"Upload %@ Video" = "Upload %@ Video";
+"Select a video of yourself performing the %@ technique." = "Select a video of yourself performing the %@ technique.";
+"Select Video from Library" = "Select Video from Library";
+"For best results, ensure your entire body is visible, and you are performing the technique from start to finish." = "For best results, ensure your entire body is visible, and you are performing the technique from start to finish.";
+
+// Technique Comparison View
+"%@ Analysis" = "%@ Analysis";
+"Side by Side" = "Side by Side";
+"3D Overlay" = "3D Overlay";
+"Your Technique" = "Your Technique";
+"Model Technique" = "Model Technique";
+"Technique Analysis" = "Technique Analysis";
+"3D Overlay (Conceptual)" = "3D Overlay (Conceptual)";
+"Note: 3D rendering is currently simplified." = "Note: 3D rendering is currently simplified.";
+"Analysis & Feedback" = "Analysis & Feedback";
+"Analyzing your technique..." = "Analyzing your technique...";
+"Overall Technique Score" = "Overall Technique Score";
+"Compared to model performance" = "Compared to model performance";
+"Technical Report" = "Technical Report";
+"Loading technical report..." = "Loading technical report...";
+"Scores: You vs. Model" = "Scores: You vs. Model";
+"Your Score" = "Your Score";
+"Model Score" = "Model Score";
+"Technical Elements Breakdown" = "Technical Elements Breakdown";
+"Element" = "Element";
+"You" = "You";
+"Model" = "Model";
+"Improvement Suggestions" = "Improvement Suggestions";
+"Excellent! All key technical elements are performed correctly." = "Excellent! All key technical elements are performed correctly.";
+"Key Technique Elements" = "Key Technique Elements";
+"Analysis data not available. Please ensure the video was processed." = "Analysis data not available. Please ensure the video was processed.";
+"Technical analysis data not available." = "Technical analysis data not available.";
+"Refresh Analysis" = "Refresh Analysis";
+"Analysis Error" = "Analysis Error";
+"Retry" = "Retry";
+
+// String formatting for technique analysis
+"%@: Well done!" = "%@: Well done!";
+"%@: Focus on improving this aspect. Check tutorials for guidance." = "%@: Focus on improving this aspect. Check tutorials for guidance.";
+
+// Upload Tab View
+"Choose the type of video you want to upload" = "Choose the type of video you want to upload";
+"Upload Technique Video" = "Upload Technique Video";
+"Analyze and compare your badminton techniques with model performers" = "Analyze and compare your badminton techniques with model performers";
+"Upload your match videos for performance analysis" = "Upload your match videos for performance analysis";
+
+// Technical strings - converting for proper display
+"shoulder_abduction" = "Shoulder Abduction";
+"elbow_flexion" = "Elbow Flexion";
+"elbow_lower" = "Elbow Position";
+"foot_direction_aligned" = "Foot Direction";
+"proximal_to_distal_sequence" = "Movement Sequence";
+"hip_forward_shift" = "Hip Movement";
+"trunk_rotation_completed" = "Trunk Rotation";

@@ -51,3 +51,101 @@
 // Details screens
 "Technicals Detail" = "技术分析详情";
 "Training Goals Detail" = "训练目标详情";
+
+// Techniques List View
+"Badminton Techniques" = "羽毛球技术";
+"Select a technique to upload and analyze your form" = "选择一项技术上传并分析您的表现";
+"Techniques" = "技术";
+
+// Technique Names
+"Backhand Clear" = "反手高远球";
+"Underhand Clear" = "正手高远球";
+"Overhead Clear" = "头顶高远球";
+"Drop Shot" = "吊球";
+"Smash" = "杀球";
+"Net Shot" = "网前球";
+
+// Technique Descriptions
+"A clear shot played with the back of the hand facing forward." = "一种以手背朝前的方式击打的高远球。";
+"A defensive shot played from below waist height, sending the shuttle high to the back of the opponent's court." = "一种从腰部以下高度击打的防守球，将球高高地送到对方场地后方。";
+"A powerful shot played from above the head, sending the shuttle to the back of the opponent's court." = "一种从头顶上方击打的有力球，将球送到对方场地后方。";
+"A gentle shot that just clears the net and drops sharply on the other side." = "一种轻柔地刚好越过网，在对方场地陡然下落的球。";
+"A powerful overhead shot hit steeply downward into the opponent's court." = "一种从高处陡然向下击打进入对方场地的有力球。";
+"A soft shot played near the net that just clears it and falls close to the net on the other side." = "一种在网前轻柔地击打，刚好越过网并在对方网前落下的球。";
+
+// Technique Detail View
+"Upload Your %@ Video" = "上传您的%@视频";
+"Upload Second Video for Comparison" = "上传第二个视频进行比较";
+"Your Analyzed Video" = "您的分析视频";
+"Next Steps" = "下一步";
+"Compare with Model Video" = "与模范视频比较";
+"Re-upload Primary Video" = "重新上传主视频";
+"Key Points for %@" = "%@的关键点";
+"Start with proper stance, feet shoulder-width apart." = "以正确的姿势开始，双脚与肩同宽。";
+"Grip the racket with a relaxed, comfortable hold." = "以放松、舒适的方式握拍。";
+"Maintain balance throughout the motion." = "在整个动作过程中保持平衡。";
+"Keep your eye on the shuttle at all times." = "始终保持眼睛注视球。";
+"Follow through with your swing for better control." = "跟随挥拍动作以获得更好的控制。";
+"Processing video..." = "处理视频中...";
+"Uploading & Analyzing Primary Video..." = "上传并分析主视频中...";
+"Uploading & Analyzing Comparison Video..." = "上传并分析比较视频中...";
+"Processing Model Video..." = "处理模范视频中...";
+"Error" = "错误";
+"Try Upload Again" = "重新尝试上传";
+
+// Technique Video Upload View
+"Upload Comparison Video" = "上传比较视频";
+"Upload %@ Video" = "上传%@视频";
+"Select a video of yourself performing the %@ technique." = "选择一个您自己执行%@技术的视频。";
+"Select Video from Library" = "从相册中选择视频";
+"For best results, ensure your entire body is visible, and you are performing the technique from start to finish." = "为了获得最佳效果，请确保您的整个身体可见，并且从头到尾完成技术动作。";
+
+// Technique Comparison View
+"%@ Analysis" = "%@分析";
+"Side by Side" = "并排对比";
+"3D Overlay" = "3D叠加";
+"Your Technique" = "您的技术";
+"Model Technique" = "模范技术";
+"Technique Analysis" = "技术分析";
+"3D Overlay (Conceptual)" = "3D叠加（概念性）";
+"Note: 3D rendering is currently simplified." = "注意：3D渲染目前已简化。";
+"Analysis & Feedback" = "分析与反馈";
+"Analyzing your technique..." = "分析您的技术中...";
+"Overall Technique Score" = "整体技术得分";
+"Compared to model performance" = "与模范表现相比";
+"Technical Report" = "技术报告";
+"Loading technical report..." = "加载技术报告中...";
+"Scores: You vs. Model" = "得分：您 vs 模范";
+"Your Score" = "您的得分";
+"Model Score" = "模范得分";
+"Technical Elements Breakdown" = "技术元素分解";
+"Element" = "元素";
+"You" = "您";
+"Model" = "模范";
+"Improvement Suggestions" = "改进建议";
+"Excellent! All key technical elements are performed correctly." = "太棒了！所有关键技术元素的执行都是正确的。";
+"Key Technique Elements" = "关键技术元素";
+"Analysis data not available. Please ensure the video was processed." = "分析数据不可用。请确保视频已处理。";
+"Technical analysis data not available." = "技术分析数据不可用。";
+"Refresh Analysis" = "刷新分析";
+"Analysis Error" = "分析错误";
+"Retry" = "重试";
+
+// String formatting for technique analysis
+"%@: Well done!" = "%@：做得好！";
+"%@: Focus on improving this aspect. Check tutorials for guidance." = "%@：专注于改进这一方面。查看教程获取指导。";
+
+// Upload Tab View
+"Choose the type of video you want to upload" = "选择您要上传的视频类型";
+"Upload Technique Video" = "上传技术视频";
+"Analyze and compare your badminton techniques with model performers" = "分析并比较您的羽毛球技术与模范表演者";
+"Upload your match videos for performance analysis" = "上传您的比赛视频进行表现分析";
+
+// Technical strings - converting for proper display
+"shoulder_abduction" = "肩部外展";
+"elbow_flexion" = "肘部弯曲";
+"elbow_lower" = "肘部位置";
+"foot_direction_aligned" = "脚部方向";
+"proximal_to_distal_sequence" = "运动顺序";
+"hip_forward_shift" = "髋部移动";
+"trunk_rotation_completed" = "躯干旋转";

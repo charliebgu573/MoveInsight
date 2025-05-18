@@ -12,12 +12,12 @@ struct UploadTabView: View {
                 
                 VStack(spacing: 30) {
                     // Header
-                    Text("Upload Video")
+                    Text(LocalizedStringKey("Upload Video"))
                         .font(.title)
                         .foregroundColor(ColorManager.textPrimary)
                         .padding(.top, 40)
                     
-                    Text("Choose the type of video you want to upload")
+                    Text(LocalizedStringKey("Choose the type of video you want to upload"))
                         .font(.subheadline)
                         .foregroundColor(ColorManager.textSecondary)
                         .multilineTextAlignment(.center)
@@ -34,8 +34,8 @@ struct UploadTabView: View {
                         navigateToTechniquesList = true
                     }) {
                         UploadOptionCard(
-                            title: "Upload Technique Video",
-                            description: "Analyze and compare your badminton techniques with model performers",
+                            title: LocalizedStringKey("Upload Technique Video"),
+                            description: LocalizedStringKey("Analyze and compare your badminton techniques with model performers"),
                             icon: "figure.badminton"
                         )
                     }
@@ -46,8 +46,8 @@ struct UploadTabView: View {
                         // Do nothing for now, as per requirements
                     }) {
                         UploadOptionCard(
-                            title: "Upload Match Video",
-                            description: "Upload your match videos for performance analysis",
+                            title: LocalizedStringKey("Upload Match Video"),
+                            description: LocalizedStringKey("Upload your match videos for performance analysis"),
                             icon: "sportscourt"
                         )
                     }
@@ -64,8 +64,8 @@ struct UploadTabView: View {
 
 // Card view for upload options
 struct UploadOptionCard: View {
-    let title: String
-    let description: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
     let icon: String
     
     var body: some View {
@@ -107,7 +107,6 @@ struct UploadOptionCard: View {
     }
 }
 
-// Button style with scale effect
 struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

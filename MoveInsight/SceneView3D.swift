@@ -1,434 +1,293 @@
+// MoveInsight/SceneView3D.swift
 import SwiftUI
-import Vision
 import SceneKit
-import simd
+import simd // For SIMD3<Float>
 
-// Scene delegate to maintain camera position across updates
-class SceneDelegate: NSObject, SCNSceneRendererDelegate, ObservableObject {
-    var lastCameraTransform: SCNMatrix4?
-    
+// SceneKitViewDelegate: Manages SceneKit renderer updates and camera state.
+class SceneKitViewDelegate: NSObject, SCNSceneRendererDelegate, ObservableObject {
+    @Published var lastCameraTransform: SCNMatrix4?
+
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
-        // Capture camera transform
         if let pointOfView = renderer.pointOfView {
-            lastCameraTransform = pointOfView.transform
+            DispatchQueue.main.async {
+                if let lastTransform = self.lastCameraTransform {
+                    if !SCNMatrix4EqualToMatrix4(lastTransform, pointOfView.transform) {
+                        self.lastCameraTransform = pointOfView.transform
+                    }
+                } else {
+                    self.lastCameraTransform = pointOfView.transform
+                }
+            }
         }
     }
 }
 
+// SceneView3D: A SwiftUI UIViewRepresentable for displaying 3D skeletons.
 struct SceneView3D: UIViewRepresentable {
-    var pose3DBodies: [Pose3DBody]
-    var bodyConnections: [BodyConnection]
-    @ObservedObject var sceneDelegate = SceneDelegate()
-    
-    // Define the root joint to use for alignment
-    private let rootJoint: VNHumanBodyPoseObservation.JointName = .neck
-    
+    let userPose3D: [String: SIMD3<Float>]?
+    let modelPose3D: [String: SIMD3<Float>]?
+    let bodyConnections: [BodyConnection3D]
+
+    // zScale: Adjusts the depth perception. Tune as needed.
+    private let zScale: Float = 0.7
+    private let skeletonNodeName = "skeletonRootNode"
+    // floorLevelY: The Y-coordinate where the floor is placed. Skeletons will stand on this.
+    private let floorLevelY: Float = -0.75
+    // skeletonHeightScale: Multiplies the normalized Y-coordinates to give skeletons a reasonable height in the scene.
+    private let skeletonHeightScale: Float = 1.5 // Adjust this to make skeletons taller or shorter
+
+    @ObservedObject var sceneDelegate: SceneKitViewDelegate
+
     func makeUIView(context: Context) -> SCNView {
         let sceneView = SCNView()
-        let scene = SCNScene()
+        sceneView.scene = SCNScene()
+
+        setupCamera(in: sceneView.scene!, view: sceneView)
+        setupLighting(in: sceneView.scene!)
+        setupFloorWithGrid(in: sceneView.scene!) // Updated to add a grid pattern
         
-        // Setup camera
-        setupCamera(in: scene)
-        
-        // Setup lighting
-        setupLighting(in: scene)
-        
-        // Add floor grid for better orientation
-        let floor = createFloorGrid()
-        floor.position = SCNVector3(0, 0, 0)
-        scene.rootNode.addChildNode(floor)
-        
-        // Setup scene
-        sceneView.scene = scene
-        sceneView.backgroundColor = UIColor.systemBackground
+        sceneView.backgroundColor = UIColor.systemGray5
         sceneView.allowsCameraControl = true
         sceneView.showsStatistics = false
         sceneView.delegate = sceneDelegate
+        sceneView.antialiasingMode = .multisampling4X
         
         return sceneView
     }
     
     func updateUIView(_ uiView: SCNView, context: Context) {
-        // Clear existing nodes except for camera, lights, and floor
-        uiView.scene?.rootNode.childNodes.forEach { node in
-            if node.camera == nil && node.light == nil && node.name != "floor" {
-                node.removeFromParentNode()
-            }
-        }
-        
-        // Group poses by source
-        let primaryPoses = pose3DBodies.filter { $0.videoSource == .primary }
-        let secondaryPoses = pose3DBodies.filter { $0.videoSource == .secondary }
+        guard let scene = uiView.scene else { return }
 
-        let leftPosition = SIMD3<Float>(0, 0, 0)
-        let rightPosition = SIMD3<Float>(0, 0, 0)
-        
-        // Get primary pose and height
-        guard let primaryPose = primaryPoses.first else {
-            // If only secondary pose exists, just add it without scaling
-            if let secondaryPose = secondaryPoses.first {
-                addSkeletonToScene(body: secondaryPose, scene: uiView.scene, position: SIMD3<Float>(0, 0, 0))
-                addHeadToScene(body: secondaryPose, scene: uiView.scene, position: SIMD3<Float>(0, 0, 0))
-            }
-            return
+        // Remove previously drawn skeletons
+        scene.rootNode.childNodes { (node, _) -> Bool in
+            node.name == skeletonNodeName
+        }.forEach { $0.removeFromParentNode() }
+
+        // Add user skeleton
+        if let userPose = userPose3D, !userPose.isEmpty {
+            addSkeletonToScene(
+                pose: userPose,
+                scene: scene,
+                color: .systemBlue,
+                baseOffset: SIMD3<Float>(-0.4, 0, 0) // X-offset for side-by-side placement
+            )
         }
         
-        // Calculate primary height to use for scaling
-        let primaryHeight = calculateSkeletonHeight(primaryPose)
-        
-        // Add primary pose (left side)
-        addSkeletonToScene(body: primaryPose, scene: uiView.scene, position: leftPosition)
-        addHeadToScene(body: primaryPose, scene: uiView.scene, position: leftPosition)
-        
-        // Add secondary pose (right side) with height matching primary
-        if let secondaryPose = secondaryPoses.first {
-            // Get scaling factor
-            let secondaryHeight = calculateSkeletonHeight(secondaryPose)
-            let scaleFactor = primaryHeight / max(secondaryHeight, 0.001)
-            
-            // Add scaled skeleton
-            addSkeletonToScene(body: secondaryPose,
-                              scene: uiView.scene,
-                              position: rightPosition,
-                              scaleFactor: scaleFactor)
-            
-            // Add head with the same scaling
-            addHeadToScene(body: secondaryPose,
-                          scene: uiView.scene,
-                          position: rightPosition,
-                          scaleFactor: scaleFactor)
+        // Add model skeleton
+        if let modelPose = modelPose3D, !modelPose.isEmpty {
+            addSkeletonToScene(
+                pose: modelPose,
+                scene: scene,
+                color: .systemRed,
+                baseOffset: SIMD3<Float>(0.4, 0, 0) // X-offset for side-by-side placement
+            )
         }
     }
     
-    // Setup camera with initial position - even closer for better visibility
-    private func setupCamera(in scene: SCNScene) {
-        let camera = SCNCamera()
-        camera.usesOrthographicProjection = false
-        camera.fieldOfView = 45 // Narrower field of view for more zoom
-        camera.zNear = 0.1
-        camera.zFar = 100
-        
+    private func setupCamera(in scene: SCNScene, view: SCNView) {
         let cameraNode = SCNNode()
-        cameraNode.camera = camera
-        
-        // Set default camera position if no previous transform exists
-        if let lastTransform = sceneDelegate.lastCameraTransform {
-            // Use the last camera transform if available
-            cameraNode.transform = lastTransform
+        cameraNode.camera = SCNCamera()
+        cameraNode.camera?.zNear = 0.1
+        cameraNode.camera?.zFar = 100
+        cameraNode.camera?.fieldOfView = 50
+
+        if let transform = sceneDelegate.lastCameraTransform {
+            cameraNode.transform = transform
         } else {
-            // Position camera very close to origin for better visibility
-            cameraNode.position = SCNVector3(0, 0, 3)
+            // Initial camera position: looking at origin (0,0,0), slightly elevated, positive Z.
+            cameraNode.position = SCNVector3(x: 0, y: 0.3, z: 2.8) // Adjusted Z for a bit more distance
             cameraNode.look(at: SCNVector3(0, 0, 0))
         }
-        
         scene.rootNode.addChildNode(cameraNode)
     }
     
-    // Setup lighting with ambient and directional lights
     private func setupLighting(in scene: SCNScene) {
-        // Add ambient light
-        let ambientLight = SCNLight()
-        ambientLight.type = .ambient
-        ambientLight.intensity = 100
-        ambientLight.color = UIColor(white: 0.5, alpha: 1.0)
-        
+        // Ambient light for overall illumination
         let ambientLightNode = SCNNode()
-        ambientLightNode.light = ambientLight
+        ambientLightNode.light = SCNLight()
+        ambientLightNode.light!.type = .ambient
+        ambientLightNode.light!.color = UIColor(white: 0.7, alpha: 1.0)
         scene.rootNode.addChildNode(ambientLightNode)
         
-        // Add directional light
-        let directionalLight = SCNLight()
-        directionalLight.type = .directional
-        directionalLight.intensity = 1000
-        directionalLight.castsShadow = true
-        directionalLight.shadowColor = UIColor.black.withAlphaComponent(0.8)
-        
+        // Directional light for highlights and shadows
         let directionalLightNode = SCNNode()
-        directionalLightNode.light = directionalLight
-        directionalLightNode.position = SCNVector3(5, 5, 5)
-        directionalLightNode.look(at: SCNVector3(0, 0, 0))
+        directionalLightNode.light = SCNLight()
+        directionalLightNode.light!.type = .directional
+        directionalLightNode.light!.color = UIColor(white: 0.8, alpha: 1.0)
+        directionalLightNode.light!.castsShadow = true
+        directionalLightNode.light!.shadowMode = .deferred
+        directionalLightNode.light!.shadowColor = UIColor.black.withAlphaComponent(0.4)
+        directionalLightNode.light!.shadowSampleCount = 16
+        directionalLightNode.light!.shadowRadius = 3.0
+        directionalLightNode.position = SCNVector3(x: -1.5, y: 2.5, z: 2)
+        directionalLightNode.look(at: SCNVector3(0,0,0))
         scene.rootNode.addChildNode(directionalLightNode)
     }
-    
-    // Create a floor grid for better orientation
-    private func createFloorGrid() -> SCNNode {
-        let gridSize: Float = 10
-        let gridNode = SCNNode()
-        gridNode.name = "floor"
+
+    // Sets up the floor with a checkerboard pattern to simulate a grid.
+    private func setupFloorWithGrid(in scene: SCNScene) {
+        let floorGeometry = SCNFloor()
+        floorGeometry.reflectivity = 0.05
         
-        // Create a grid floor for better orientation
-        for i in stride(from: -gridSize/2, through: gridSize/2, by: 0.5) {
-            // X lines
-            let xLine = SCNNode(geometry: SCNBox(width: CGFloat(gridSize), height: 0.001, length: 0.01, chamferRadius: 0))
-            xLine.position = SCNVector3(0, 0, i)
-            xLine.geometry?.firstMaterial?.diffuse.contents = i == 0 ? UIColor.blue : UIColor.gray.withAlphaComponent(0.5)
-            
-            // Z lines
-            let zLine = SCNNode(geometry: SCNBox(width: 0.01, height: 0.001, length: CGFloat(gridSize), chamferRadius: 0))
-            zLine.position = SCNVector3(i, 0, 0)
-            zLine.geometry?.firstMaterial?.diffuse.contents = i == 0 ? UIColor.red : UIColor.gray.withAlphaComponent(0.5)
-            
-            gridNode.addChildNode(xLine)
-            gridNode.addChildNode(zLine)
-        }
-        
-        return gridNode
-    }
-    
-    // Add the skeleton without the head
-    private func addSkeletonToScene(body: Pose3DBody, scene: SCNScene?, position: SIMD3<Float>? = nil, scaleFactor: Float = 1.0) {
-        guard let scene = scene else { return }
-        
-        // Create a parent node for this skeleton
-        let skeletonNode = SCNNode()
-        skeletonNode.name = "skeleton"
-        
-        // Find the lowest joint to place on ground
-        let lowestPoint = findLowestPoint(body)
-        
-        // Calculate the offset to place the skeleton at the specified position
-        // and with the lowest point exactly at y=0 (ground level)
-        let basePosition = position ?? SIMD3<Float>(0, 0, 0)
-        let verticalOffset = -lowestPoint // This will place lowest point at y=0
-        
-        // Create joint nodes for joints below neck only
-        var jointNodes = [VNHumanBodyPoseObservation.JointName: SCNNode]()
-        let upperBodyJoints: Set<VNHumanBodyPoseObservation.JointName> = [
-            .leftEye, .rightEye, .leftEar, .rightEar, .nose, .neck
-        ]
-        
-        for (jointName, posePoint) in body.joints {
-            // Skip joints above shoulders
-            if upperBodyJoints.contains(jointName) {
-                continue
+        // Create a checkerboard material for the floor
+        let floorMaterial = SCNMaterial()
+        if #available(iOS 13.0, *) { // Check for iOS 13 availability for CIFilter
+            let checkerboard = CIFilter(name: "CICheckerboardGenerator")!
+            checkerboard.setValue(CIColor.gray, forKey: "inputColor0") // Color for light squares
+            checkerboard.setValue(CIColor.black, forKey: "inputColor1") // Color for dark squares
+            checkerboard.setValue(80, forKey: "inputWidth") // Width of each square in the pattern
+            checkerboard.setValue(CIVector(x: 0, y: 0), forKey: "inputCenter")
+            if let ciImage = checkerboard.outputImage {
+                floorMaterial.diffuse.contents = ciImage
+                // Adjust texture wrapping and scaling if needed
+                floorMaterial.diffuse.wrapS = .repeat
+                floorMaterial.diffuse.wrapT = .repeat
+                // Scale the texture to make the grid appear reasonably sized on the floor.
+                // A transform of SCNMatrix4MakeScale(10, 10, 10) means the texture repeats 10 times.
+                floorMaterial.diffuse.contentsTransform = SCNMatrix4MakeScale(20, 20, 1) // Repeat texture more for smaller grid cells
+            } else {
+                floorMaterial.diffuse.contents = UIColor.systemGray4 // Fallback color
             }
-            
-            // Apply offset and scaling to position skeleton correctly
-            let adjustedPosition = SIMD3<Float>(
-                posePoint.position.x * scaleFactor + basePosition.x,
-                posePoint.position.y * scaleFactor + verticalOffset * scaleFactor + basePosition.y,
-                posePoint.position.z * scaleFactor + basePosition.z
-            )
-            
-            let jointNode = createJointNode(
-                position: adjustedPosition,
-                source: body.videoSource
-            )
-            jointNodes[jointName] = jointNode
-            skeletonNode.addChildNode(jointNode)
-        }
-        
-        // Connect joints with bones, ensuring shoulder connection
-        connectJoints(joints: jointNodes, in: skeletonNode, connections: bodyConnections, source: body.videoSource)
-        
-        // Add shoulder connection if exists in joints
-        if let leftShoulder = jointNodes[.leftShoulder], let rightShoulder = jointNodes[.rightShoulder] {
-            createBoneBetween(
-                startPos: leftShoulder.simdPosition,
-                endPos: rightShoulder.simdPosition,
-                in: skeletonNode,
-                source: body.videoSource
-            )
-        }
-        
-        // Add the skeleton to the scene
-        scene.rootNode.addChildNode(skeletonNode)
-    }
-    
-    // Add just the head
-    private func addHeadToScene(body: Pose3DBody, scene: SCNScene?, position: SIMD3<Float>? = nil, scaleFactor: Float = 1.0) {
-        guard let scene = scene else { return }
-        
-        // We need shoulders to place the head properly
-        guard let leftShoulderJoint = body.joints[.leftShoulder],
-              let rightShoulderJoint = body.joints[.rightShoulder] else {
-            return
-        }
-        
-        // Find the lowest joint to place on ground
-        let lowestPoint = findLowestPoint(body)
-        
-        // Calculate the offset for vertical position
-        let basePosition = position ?? SIMD3<Float>(0, 0, 0)
-        let verticalOffset = -lowestPoint
-        
-        // Scale and offset shoulder positions
-        let leftShoulderPos = SIMD3<Float>(
-            leftShoulderJoint.position.x * scaleFactor + basePosition.x,
-            leftShoulderJoint.position.y * scaleFactor + verticalOffset * scaleFactor + basePosition.y,
-            leftShoulderJoint.position.z * scaleFactor + basePosition.z
-        )
-        
-        let rightShoulderPos = SIMD3<Float>(
-            rightShoulderJoint.position.x * scaleFactor + basePosition.x,
-            rightShoulderJoint.position.y * scaleFactor + verticalOffset * scaleFactor + basePosition.y,
-            rightShoulderJoint.position.z * scaleFactor + basePosition.z
-        )
-        
-        // Calculate center point between shoulders
-        let shoulderCenter = (leftShoulderPos + rightShoulderPos) / 2
-        
-        // Calculate head position just above shoulders
-        let headPosition = SIMD3<Float>(
-            shoulderCenter.x,                // Center between shoulders (X)
-            shoulderCenter.y + 0.1,          // Just slightly above shoulders (Y)
-            shoulderCenter.z                 // Same depth as shoulders (Z)
-        )
-        
-        // Create a small head sphere with consistent size between skeletons
-        let headRadius = 0.05 // Fixed size regardless of scaling
-        let headGeometry = SCNSphere(radius: CGFloat(headRadius))
-        let material = SCNMaterial()
-        
-        // Full opacity head, color based on source
-        let color = body.videoSource == .primary ?
-            UIColor.systemBlue :
-            UIColor.systemRed
-            
-        material.diffuse.contents = color
-        material.specular.contents = UIColor.white
-        headGeometry.materials = [material]
-        
-        // Create head node
-        let headNode = SCNNode(geometry: headGeometry)
-        headNode.position = SCNVector3(headPosition.x, headPosition.y, headPosition.z)
-        
-        headNode.opacity = 0.6
-        
-        // Add the head to the scene
-        scene.rootNode.addChildNode(headNode)
-    }
-    
-    private func createJointNode(position: SIMD3<Float>, source: Pose3DBody.VideoSource) -> SCNNode {
-        // Create a small sphere for the joint
-        let jointGeometry = SCNSphere(radius: 0.01)
-        
-        let material = SCNMaterial()
-        let color = source == .primary ?
-            UIColor.systemBlue :
-            UIColor.systemRed
-        
-        material.diffuse.contents = color
-        material.specular.contents = UIColor.white
-        jointGeometry.materials = [material]
-        
-        let jointNode = SCNNode(geometry: jointGeometry)
-        jointNode.position = SCNVector3(
-            position.x,
-            position.y,
-            position.z
-        )
-        
-        // Apply opacity to entire node if secondary
-        if source == .secondary {
-            jointNode.opacity = 0.5
-        }
-        
-        return jointNode
-    }
-    
-    private func connectJoints(joints: [VNHumanBodyPoseObservation.JointName: SCNNode],
-                              in parentNode: SCNNode,
-                              connections: [BodyConnection],
-                              source: Pose3DBody.VideoSource) {
-        
-        for connection in connections {
-            // Skip connections involving neck
-            if connection.from == .neck || connection.to == .neck {
-                continue
-            }
-            
-            guard let startNode = joints[connection.from],
-                  let endNode = joints[connection.to] else {
-                continue
-            }
-            
-            let startPos = startNode.simdPosition
-            let endPos = endNode.simdPosition
-            
-            // Create a bone between the joints
-            createBoneBetween(startPos: startPos,
-                             endPos: endPos,
-                             in: parentNode,
-                             source: source)
-        }
-    }
-    
-    private func createBoneBetween(startPos: SIMD3<Float>,
-                                  endPos: SIMD3<Float>,
-                                  in parentNode: SCNNode,
-                                  source: Pose3DBody.VideoSource) {
-        
-        // Calculate the midpoint between start and end positions
-        let midPoint = (startPos + endPos) / 2
-        
-        // Calculate the distance between points
-        let distance = simd_distance(startPos, endPos)
-        
-        // Create a cylinder for the bone
-        let boneGeometry = SCNCylinder(radius: 0.01, height: CGFloat(distance))
-        let material = SCNMaterial()
-        
-        // Full opacity for bones
-        let color = source == .primary ?
-            UIColor.systemBlue :
-            UIColor.systemRed
-        
-        material.diffuse.contents = color
-        boneGeometry.materials = [material]
-        
-        let boneNode = SCNNode(geometry: boneGeometry)
-        
-        // Position the bone at the midpoint
-        boneNode.position = SCNVector3(midPoint.x, midPoint.y, midPoint.z)
-        
-        // Calculate the orientation to point from start to end
-        let direction = simd_normalize(endPos - startPos)
-        let upVector = SIMD3<Float>(0, 1, 0)
-        
-        // If direction is parallel to up vector, use a different up vector
-        let rotationAxis: SIMD3<Float>
-        if abs(simd_dot(direction, upVector)) > 0.999 {
-            rotationAxis = simd_cross(SIMD3<Float>(1, 0, 0), direction)
         } else {
-            rotationAxis = simd_cross(upVector, direction)
+            floorMaterial.diffuse.contents = UIColor.systemGray4 // Fallback for older iOS
         }
+        floorMaterial.lightingModel = .physicallyBased
+        floorGeometry.materials = [floorMaterial]
         
-        let rotationAngle = acos(simd_dot(upVector, direction))
+        let floorNode = SCNNode(geometry: floorGeometry)
+        floorNode.position = SCNVector3(0, floorLevelY, 0)
+        scene.rootNode.addChildNode(floorNode)
         
-        if simd_length(rotationAxis) > 1e-5 {
-            let normalizedRotationAxis = simd_normalize(rotationAxis)
-            let quaternion = simd_quatf(angle: rotationAngle, axis: normalizedRotationAxis)
-            boneNode.simdOrientation = quaternion
+        // Note: For a more distinct line grid, you would typically use an image texture
+        // with lines drawn on it, e.g., UIImage(named: "grid_texture.png").
+        // The checkerboard provides a basic grid-like pattern.
+    }
+    
+    // Adds a skeleton to the scene, adjusting its Y position to stand on the floor.
+    private func addSkeletonToScene(pose: [String: SIMD3<Float>], scene: SCNScene, color: UIColor, baseOffset: SIMD3<Float>) {
+        let skeletonRoot = SCNNode()
+        skeletonRoot.name = skeletonNodeName
+        
+        var jointNodes: [String: SCNNode] = [:]
+        var minYInSkeletonSpace: Float = Float.greatestFiniteMagnitude
+
+        // Store transformed joint positions relative to the skeleton's own origin
+        var relativeJointPositions: [String: SCNVector3] = [:]
+
+        // First pass: Transform coordinates (including Y-inversion) and find the minimum Y.
+        for (jointName, position3D) in pose {
+            // Assuming position3D.x and position3D.y are normalized (0-1)
+            // X: Center it if needed, e.g., (position3D.x - 0.5) * someXScale
+            let transformedX = (position3D.x - 0.5) * skeletonHeightScale // Center X and scale
+            
+            // Y: Invert (0=top becomes 1=top_of_skeleton_height) and scale.
+            // (1.0 - position3D.y) makes 0 bottom of normalized range, 1 top.
+            // Then scale by skeletonHeightScale.
+            let transformedY = (1.0 - position3D.y) * skeletonHeightScale
+            
+            let transformedZ = position3D.z * zScale
+            
+            let relativePos = SCNVector3(transformedX, transformedY, transformedZ)
+            relativeJointPositions[jointName] = relativePos
+            minYInSkeletonSpace = min(minYInSkeletonSpace, transformedY)
         }
 
-        boneNode.opacity = 0.6
-        
-        parentNode.addChildNode(boneNode)
-    }
-    
-    // Find the lowest point in the skeleton to place on ground
-    private func findLowestPoint(_ body: Pose3DBody) -> Float {
-        var lowestY = Float.greatestFiniteMagnitude
-        
-        for (_, joint) in body.joints {
-            lowestY = min(lowestY, joint.position.y)
+        // If no valid minY was found (e.g., empty pose), default to 0 to avoid issues.
+        if minYInSkeletonSpace == Float.greatestFiniteMagnitude {
+            minYInSkeletonSpace = 0
         }
         
-        // If no joints found, return 0
-        return lowestY != Float.greatestFiniteMagnitude ? lowestY : 0
-    }
-    
-    // Calculate the height of a skeleton (from lowest to highest point)
-    private func calculateSkeletonHeight(_ body: Pose3DBody) -> Float {
-        var lowest = Float.greatestFiniteMagnitude
-        var highest = -Float.greatestFiniteMagnitude
+        // Calculate the Y adjustment needed to place the skeleton's lowest point (minYInSkeletonSpace) on the floorLevelY.
+        let yShiftToFloor = floorLevelY - minYInSkeletonSpace
         
-        for (_, joint) in body.joints {
-            lowest = min(lowest, joint.position.y)
-            highest = max(highest, joint.position.y)
+        // Set the final position for the skeleton root node.
+        // The Y position includes the base offset (usually 0 for Y) and the calculated shift.
+        skeletonRoot.position = SCNVector3(baseOffset.x, yShiftToFloor + baseOffset.y, baseOffset.z)
+        scene.rootNode.addChildNode(skeletonRoot)
+
+        // Second pass: Create SCNNode for each joint using its relative position and add to skeletonRoot.
+        for (jointName, relativePos) in relativeJointPositions {
+            let jointNode = createJointSphereNode(radius: 0.025, color: color)
+            jointNode.position = relativePos // Position is relative to skeletonRoot
+            skeletonRoot.addChildNode(jointNode)
+            jointNodes[jointName] = jointNode // Store for bone creation
         }
         
-        return highest - lowest
+        // Create cylinder nodes for bones, connecting the joint spheres.
+        // These are also relative to skeletonRoot.
+        for connection in bodyConnections {
+            guard let fromNode = jointNodes[connection.from],
+                  let toNode = jointNodes[connection.to] else {
+                continue
+            }
+            let boneNode = createBoneCylinderNode(from: fromNode.position, to: toNode.position, radius: 0.012, color: color)
+            skeletonRoot.addChildNode(boneNode)
+        }
     }
+    
+    private func createJointSphereNode(radius: CGFloat, color: UIColor) -> SCNNode {
+        let sphere = SCNSphere(radius: radius)
+        let material = SCNMaterial()
+        material.diffuse.contents = color
+        material.lightingModel = .phong
+        sphere.materials = [material]
+        return SCNNode(geometry: sphere)
+    }
+    
+    private func createBoneCylinderNode(from startPoint: SCNVector3, to endPoint: SCNVector3, radius: CGFloat, color: UIColor) -> SCNNode {
+        let height = SCNVector3.distance(vectorStart: startPoint, vectorEnd: endPoint)
+        guard height > 0.001 else { return SCNNode() }
+
+        let cylinder = SCNCylinder(radius: radius, height: CGFloat(height))
+        let material = SCNMaterial()
+        material.diffuse.contents = color
+        material.lightingModel = .phong
+        cylinder.materials = [material]
+        
+        let boneNode = SCNNode(geometry: cylinder)
+        
+        boneNode.position = SCNVector3(
+            (startPoint.x + endPoint.x) / 2,
+            (startPoint.y + endPoint.y) / 2,
+            (startPoint.z + endPoint.z) / 2
+        )
+        
+        let directionVector = endPoint - startPoint
+        let yAxis = SCNVector3(0, 1, 0)
+        
+        let rotationAxis = yAxis.cross(directionVector).normalized()
+        var angle = acos(yAxis.dot(directionVector) / (yAxis.length() * directionVector.length()))
+
+        if rotationAxis.length() < 0.001 {
+            if directionVector.y < 0 {
+                angle = .pi
+                 boneNode.rotation = SCNVector4(1, 0, 0, Float.pi)
+            } else {
+                boneNode.rotation = SCNVector4(0,0,0,0)
+            }
+        } else if !rotationAxis.x.isNaN && !rotationAxis.y.isNaN && !rotationAxis.z.isNaN && !angle.isNaN {
+             boneNode.rotation = SCNVector4(rotationAxis.x, rotationAxis.y, rotationAxis.z, angle)
+        }
+        return boneNode
+    }
+}
+
+// Helper SCNVector3 extensions
+extension SCNVector3 {
+    static func distance(vectorStart: SCNVector3, vectorEnd: SCNVector3) -> Float {
+        let dx = vectorEnd.x - vectorStart.x; let dy = vectorEnd.y - vectorStart.y; let dz = vectorEnd.z - vectorStart.z
+        return sqrt(dx*dx + dy*dy + dz*dz)
+    }
+    func length() -> Float { return sqrt(x*x + y*y + z*z) }
+    func normalized() -> SCNVector3 {
+        let len = length(); if len == 0 { return SCNVector3(0,0,0) }
+        return SCNVector3(x/len, y/len, z/len)
+    }
+    func cross(_ vector: SCNVector3) -> SCNVector3 {
+        return SCNVector3(y * vector.z - z * vector.y, z * vector.x - x * vector.z, x * vector.y - y * vector.x)
+    }
+    func dot(_ vector: SCNVector3) -> Float { return x * vector.x + y * vector.y + z * vector.z }
+}
+func -(left: SCNVector3, right: SCNVector3) -> SCNVector3 {
+    return SCNVector3Make(left.x - right.x, left.y - right.y, left.z - right.z)
 }

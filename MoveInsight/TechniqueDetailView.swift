@@ -1,24 +1,121 @@
+// MoveInsight/TechniqueDetailView.swift
 import SwiftUI
 import AVKit
 import Combine
+import simd // Required for SIMD3 if used by PoseOverlayView indirectly via ViewModel
 
+// MARK: - Pose Overlay View (Adapted for 3D Poses from ViewModel, Renders 2D Projection)
+// This view displays a 2D projection of the 3D pose data onto the video.
+struct PoseOverlayView: View {
+    @ObservedObject var viewModel: VideoPlayerViewModel // viewModel.poses is now [String: SIMD3<Float>]
+    let videoActualRect: CGRect // The actual rectangle of the video content within the player view
+
+    var body: some View {
+        Canvas { context, size in
+            // Ensure poses are available and the video rectangle is valid.
+            guard !viewModel.poses.isEmpty,
+                  videoActualRect.size.width > 0,
+                  videoActualRect.size.height > 0 else {
+                // print("PoseOverlayView: No poses or invalid videoActualRect \(videoActualRect)")
+                return
+            }
+            let currentPoses3D = viewModel.poses // These are [String: SIMD3<Float>]
+
+            // Draw connections using the x and y components of the 3D poses.
+            for connection in viewModel.bodyConnections { // bodyConnections are StringBodyConnection for 2D
+                guard let fromPose3D = currentPoses3D[connection.from],
+                      let toPose3D = currentPoses3D[connection.to] else {
+                    // print("PoseOverlayView: Missing joint for connection \(connection.from) -> \(connection.to)")
+                    continue
+                }
+                
+                // Extract 2D points (normalized x, y) from the 3D pose data.
+                // Server provides x,y as normalized (0-1) screen coordinates.
+                let fromPointNorm = CGPoint(x: CGFloat(fromPose3D.x), y: CGFloat(fromPose3D.y))
+                let toPointNorm = CGPoint(x: CGFloat(toPose3D.x), y: CGFloat(toPose3D.y))
+                
+                // Scale these normalized points to the actual video rectangle's coordinate system.
+                let fromCanvasPoint = CGPoint(
+                    x: videoActualRect.origin.x + (fromPointNorm.x * videoActualRect.size.width),
+                    y: videoActualRect.origin.y + (fromPointNorm.y * videoActualRect.size.height)
+                )
+                let toCanvasPoint = CGPoint(
+                    x: videoActualRect.origin.x + (toPointNorm.x * videoActualRect.size.width),
+                    y: videoActualRect.origin.y + (toPointNorm.y * videoActualRect.size.height)
+                )
+                
+                var path = Path()
+                path.move(to: fromCanvasPoint)
+                path.addLine(to: toCanvasPoint)
+                context.stroke(path, with: .color(ColorManager.accentColor.opacity(0.8)), lineWidth: 3)
+            }
+
+            // Draw joints using the x and y components of the 3D poses.
+            for (_, jointPose3D) in currentPoses3D {
+                let jointPointNorm = CGPoint(x: CGFloat(jointPose3D.x), y: CGFloat(jointPose3D.y))
+                let jointCanvasPoint = CGPoint(
+                    x: videoActualRect.origin.x + (jointPointNorm.x * videoActualRect.size.width),
+                    y: videoActualRect.origin.y + (jointPointNorm.y * videoActualRect.size.height)
+                )
+                let rect = CGRect(x: jointCanvasPoint.x - 4, y: jointCanvasPoint.y - 4, width: 8, height: 8)
+                context.fill(Path(ellipseIn: rect), with: .color(Color.red.opacity(0.8)))
+            }
+        }
+        .opacity(0.7) // Keep overlay slightly transparent.
+        // .drawingGroup() // Consider for performance with very complex drawings, test if needed.
+    }
+}
+
+// KeyPointRow struct remains unchanged.
+struct KeyPointRow: View {
+    let icon: String
+    let text: String
+    var body: some View { /* ... as before ... */
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(ColorManager.accentColor)
+                .frame(width: 24, height: 24)
+            Text(LocalizedStringKey(text))
+                .font(.subheadline)
+                .foregroundColor(ColorManager.textPrimary)
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Main Detail View (TechniqueDetailView)
 struct TechniqueDetailView: View {
     let technique: BadmintonTechnique
     
-    // State to track the user's current progress
-    @State private var uploadedVideoURL: URL?
-    @State private var videoVM: VideoPlayerViewModel?
+    // StateObjects to manage VideoPlayerViewModels for primary and comparison videos.
+    // VideoPlayerViewModel now handles 3D pose data internally.
+    @StateObject private var videoVMContainer = VideoVMContainer()
+    @StateObject private var comparisonVideoVMContainer = VideoVMContainer()
+    
+    // UI state variables
     @State private var showUploadOptions = false
-    @State private var isVideoBeingProcessed = false
-    @State private var isForComparison = false // Track if this is for comparison
+    @State private var isVideoBeingUploadedOrProcessed = false
+    @State private var processingStatusMessage = NSLocalizedString("Processing video...", comment: "")
+    @State private var analysisError: String? = nil
     
-    // Cancellables for video ready listener
+    @State private var isUploadingForComparison = false
+    @State private var navigateToComparisonView = false // For programmatic navigation
+    
+    @State private var shouldShowProcessedPrimaryVideo = false
+
+    // State to hold server frame data (which now includes 3D joint info).
+    @State private var primaryVideoServerFrames: [ServerFrameData]? = nil
+    @State private var comparisonVideoServerFrames: [ServerFrameData]? = nil
+    // ComparisonResult is still based on 2D swing analysis from the server.
+    @State private var comparisonAnalysisResult: ComparisonResult? = nil
+    @State private var isFetchingComparisonAnalysis = false
+
+    // State to hold the actual video rectangle for the primary video player's 2D overlay.
+    @State private var primaryVideoActualRect: CGRect = .zero
+
     @State private var cancellables = Set<AnyCancellable>()
-    
-    // Added state for navigation to comparison view
-    @State private var navigateToComparison = false
-    @State private var modelVM: VideoPlayerViewModel?
-    @State private var secondVideoVM: VideoPlayerViewModel?
+    private let analysisService = TechniqueAnalysisService() // Service handles 3D data communication.
     
     var body: some View {
         ZStack {
@@ -26,306 +123,395 @@ struct TechniqueDetailView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Technique header
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(ColorManager.accentColor.opacity(0.2))
-                                .frame(width: 80, height: 80)
-                            
-                            Image(systemName: technique.iconName)
-                                .font(.system(size: 36))
-                                .foregroundColor(ColorManager.accentColor)
-                        }
-                        
-                        Text(technique.name)
-                            .font(.title)
-                            .foregroundColor(ColorManager.textPrimary)
-                            .multilineTextAlignment(.center)
-                        
-                        Text(technique.description)
-                            .font(.body)
-                            .foregroundColor(ColorManager.textSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                    }
-                    .padding(.top, 24)
+                    techniqueHeader // Displays technique name, icon, description.
                     
-                    // Show loading indicator while video is processing
-                    if isVideoBeingProcessed {
+                    // Conditional content based on processing state:
+                    if isVideoBeingUploadedOrProcessed {
+                        processingIndicator // Shows progress view and status message.
+                    } else if isFetchingComparisonAnalysis {
+                        // Indicator for when comparison analysis is being fetched.
                         VStack(spacing: 16) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor))
-                                .scaleEffect(1.5)
-                            
-                            Text("Processing video...")
+                            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor)).scaleEffect(1.5)
+                            Text(LocalizedStringKey("Comparing techniques..."))
                                 .foregroundColor(ColorManager.textPrimary)
                         }
-                        .frame(height: 300)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.black.opacity(0.05))
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                    }
-                    // Video preview if uploaded and ready
-                    else if let videoVM = videoVM, videoVM.isVideoReady {
-                        VStack(spacing: 12) {
-                            Text("Your Video")
-                                .font(.headline)
-                                .foregroundColor(ColorManager.textPrimary)
-                            
-                            VideoPlayerRepresentable(player: videoVM.player, videoRect: .constant(CGRect()))
-                                .frame(height: 300)
-                                .cornerRadius(12)
-                                .onAppear {
-                                    videoVM.play()
-                                }
-                                .onDisappear {
-                                    videoVM.pause()
-                                }
-                        }
-                        .padding(.horizontal)
-                        
-                        // Options after video is processed and ready
-                        VStack(spacing: 20) {
-                            Text("What would you like to do next?")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(ColorManager.textPrimary)
-                                .padding(.top, 20)
-                            
-                            HStack(spacing: 16) {
-                                Button(action: {
-                                    // Navigate to upload a second video for comparison
-                                    isForComparison = true
-                                    openTechniqueVideoUpload(forComparison: true)
-                                }) {
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "plus.viewfinder")
-                                            .font(.system(size: 30))
-                                        Text("Upload Second Video")
-                                            .font(.headline)
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                    .background(ColorManager.cardBackground)
-                                    .foregroundColor(ColorManager.textPrimary)
-                                    .cornerRadius(12)
-                                }
-                                
-                                Button(action: {
-                                    // Compare with model video
-                                    compareWithModelVideo()
-                                }) {
-                                    VStack(spacing: 12) {
-                                        Image(systemName: "person.fill.viewfinder")
-                                            .font(.system(size: 30))
-                                        Text("Compare with Model")
-                                            .font(.headline)
-                                            .multilineTextAlignment(.center)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 20)
-                                    .background(ColorManager.accentColor)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                }
-                                .disabled(!technique.hasModelVideo)
-                                .opacity(technique.hasModelVideo ? 1.0 : 0.5)
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.horizontal)
+                        .frame(height: 300).frame(maxWidth: .infinity).background(Color.black.opacity(0.05)).cornerRadius(12).padding(.horizontal)
+                    } else if let error = analysisError {
+                        errorView(error) // Displays error message and retry option.
+                    } else if shouldShowProcessedPrimaryVideo, let primaryVM = videoVMContainer.viewModel {
+                        // Display processed primary video with 2D overlay and comparison options.
+                        processedVideoView(viewModel: primaryVM, videoActualRect: $primaryVideoActualRect)
+                        comparisonOptionsView(primaryVM: primaryVM)
                     } else {
-                        // Show upload button if no video is uploaded yet
-                        UploadButton(title: "Upload Your \(technique.name) Video", iconName: "video.badge.plus") {
-                            isForComparison = false
-                            openTechniqueVideoUpload(forComparison: false)
-                        }
-                        .padding(.top, 20)
+                        // Initial state: show upload button for primary video.
+                        uploadButton(isComparisonUpload: false)
                     }
                     
-                    // Tips section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Key Points for \(technique.name)")
-                            .font(.headline)
-                            .foregroundColor(ColorManager.textPrimary)
-                        
-                        KeyPointRow(icon: "figure.play", text: "Start with proper stance, feet shoulder-width apart")
-                        KeyPointRow(icon: "hand.raised", text: "Grip the racket with a relaxed, comfortable hold")
-                        KeyPointRow(icon: "arrow.up.and.down.and.arrow.left.and.right", text: "Maintain balance throughout the motion")
-                        KeyPointRow(icon: "eye", text: "Keep your eye on the shuttle at all times")
-                        KeyPointRow(icon: "figure.walk", text: "Follow through with your swing for better control")
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(ColorManager.cardBackground)
-                    )
-                    .padding(.horizontal)
+                    keyPointsSection // Displays general key points for the technique.
                 }
                 .padding(.bottom, 32)
             }
+            // Hidden NavigationLink for programmatic navigation to TechniqueComparisonView.
+            .background(
+                NavigationLink(
+                    destination: navigationDestinationView(),
+                    isActive: $navigateToComparisonView
+                ) { EmptyView() }
+            )
         }
         .navigationTitle(technique.name)
         .navigationBarTitleDisplayMode(.inline)
+        // Sheet for presenting the video upload view.
         .sheet(isPresented: $showUploadOptions) {
-            TechniqueVideoUploadView(technique: technique, isComparison: isForComparison) { videoURL in
-                if let url = videoURL {
-                    if isForComparison {
-                        // Handle second video upload - go straight to comparison
-                        processSecondVideo(url)
-                    } else {
-                        // Handle first video upload
-                        self.uploadedVideoURL = url
-                        processUploadedVideo(url)
-                    }
-                    
-                    // We'll dismiss the sheet after video is fully processed
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showUploadOptions = false
+            TechniqueVideoUploadView(technique: technique, isComparison: isUploadingForComparison) { videoURL in
+                self.showUploadOptions = false // Dismiss sheet.
+                if let url = videoURL { // If a video URL was selected.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { // Slight delay for UI.
+                        if self.isUploadingForComparison {
+                            handleComparisonVideoSelected(url)
+                        } else {
+                            handlePrimaryVideoSelected(url)
+                        }
                     }
                 }
             }
         }
-        .onChange(of: showUploadOptions) { isShowing in
-            if !isShowing && isVideoBeingProcessed {
-                print("Upload sheet dismissed, continuing to monitor video processing state")
+    }
+
+    // MARK: - Subviews (Header, Indicators, Error, Upload Button, Processed Video, Options, Key Points)
+    // These subviews' implementations are largely the same as before, focusing on UI presentation.
+    // The `processedVideoView` is notable as it uses `PoseOverlayView` which now handles 3D data for 2D projection.
+
+    private var techniqueHeader: some View { /* ... as before ... */
+        VStack(spacing: 12) {
+            ZStack {
+                Circle().fill(ColorManager.accentColor.opacity(0.2)).frame(width: 80, height: 80)
+                Image(systemName: technique.iconName).font(.system(size: 36)).foregroundColor(ColorManager.accentColor)
             }
+            Text(technique.name).font(.title).foregroundColor(ColorManager.textPrimary).multilineTextAlignment(.center)
+            Text(technique.description).font(.body).foregroundColor(ColorManager.textSecondary).multilineTextAlignment(.center).padding(.horizontal, 24)
+        }.padding(.top, 24)
+    }
+
+    private var processingIndicator: some View { /* ... as before ... */
+        VStack(spacing: 16) {
+            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: ColorManager.accentColor)).scaleEffect(1.5)
+            Text(LocalizedStringKey(processingStatusMessage))
+                .foregroundColor(ColorManager.textPrimary)
         }
-        .background(
-            // Hidden navigation link for comparison view
-            NavigationLink(destination:
-                        Group {
-                            if isForComparison, let userVM = videoVM, let secondVM = secondVideoVM {
-                                // Two user videos
-                                TechniqueComparisonView(
-                                    technique: technique,
-                                    userVideoViewModel: userVM,
-                                    modelVideoViewModel: secondVM
-                                )
-                            } else if let userVM = videoVM, let modelVM = modelVM {
-                                // User video vs model
-                                TechniqueComparisonView(
-                                    technique: technique,
-                                    userVideoViewModel: userVM,
-                                    modelVideoViewModel: modelVM
-                                )
-                            } else {
-                                Text("Preparing comparison...")
-                            }
-                        },
-                       isActive: $navigateToComparison) {
-                EmptyView()
+        .frame(height: 300).frame(maxWidth: .infinity).background(Color.black.opacity(0.05)).cornerRadius(12).padding(.horizontal)
+    }
+
+    private func errorView(_ errorMessage: String) -> some View { /* ... as before ... */
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle.fill").font(.largeTitle).foregroundColor(.red)
+            Text(LocalizedStringKey("Error")).font(.title2).foregroundColor(ColorManager.textPrimary)
+            Text(errorMessage).font(.body).foregroundColor(ColorManager.textSecondary).multilineTextAlignment(.center).padding(.horizontal)
+            Button(LocalizedStringKey("Try Upload Again")) {
+                resetToInitialUploadState()
+                showUploadOptions = true
             }
-        )
+            .padding().background(ColorManager.accentColor).foregroundColor(.white).cornerRadius(10)
+        }
+        .padding().frame(maxWidth: .infinity).background(ColorManager.cardBackground.opacity(0.7)).cornerRadius(12).padding(.horizontal)
     }
     
-    // Function to open the video upload view
-    private func openTechniqueVideoUpload(forComparison: Bool) {
-        self.showUploadOptions = true
+    private func resetToInitialUploadState() { /* ... as before, ensures primaryVideoActualRect is reset ... */
+        analysisError = nil
+        isVideoBeingUploadedOrProcessed = false
+        isFetchingComparisonAnalysis = false
+        
+        videoVMContainer.viewModel?.cleanup()
+        videoVMContainer.viewModel = nil
+        primaryVideoServerFrames = nil
+        primaryVideoActualRect = .zero // Reset video rect crucial for new uploads
+        
+        comparisonVideoVMContainer.viewModel?.cleanup()
+        comparisonVideoVMContainer.viewModel = nil
+        comparisonVideoServerFrames = nil
+        
+        comparisonAnalysisResult = nil
+        isUploadingForComparison = false
+        shouldShowProcessedPrimaryVideo = false
+        navigateToComparisonView = false
     }
-    
-    // Process the uploaded video (first video)
-    private func processUploadedVideo(_ url: URL) {
-        // Indicate that processing has started
-        isVideoBeingProcessed = true
-        
-        // Create the video view model and begin processing
-        videoVM = VideoPlayerViewModel(
-            videoURL: url,
-            videoSource: .primary
-        )
-        
-        // Set up a publisher to listen for isVideoReady changes
-        guard let videoVM = videoVM else { return }
-        
-        videoVM.$isVideoReady
-            .dropFirst() // Skip initial false value
-            .sink { isReady in
-                if isReady {
-                    print("Video is now ready - updating UI")
-                    self.isVideoBeingProcessed = false
-                }
+
+    private func uploadButton(isComparisonUpload: Bool) -> some View { /* ... as before ... */
+        UploadButton(
+            title: isComparisonUpload ?
+                LocalizedStringKey("Upload Second Video for Comparison") :
+                LocalizedStringKey(String(format: NSLocalizedString("Upload Your %@ Video", comment: ""), technique.name)),
+            iconName: "video.badge.plus"
+        ) {
+            analysisError = nil
+            self.isUploadingForComparison = isComparisonUpload
+            if !isComparisonUpload {
+                comparisonVideoVMContainer.viewModel?.cleanup(); comparisonVideoVMContainer.viewModel = nil
+                comparisonVideoServerFrames = nil; comparisonAnalysisResult = nil
+                primaryVideoActualRect = .zero // Reset for new primary video
             }
-            .store(in: &cancellables)
-        
-        print("Started video processing - waiting for it to be ready")
+            showUploadOptions = true
+        }
+        .padding(.top, 20)
     }
     
-    // Process the second uploaded video for comparison
-    private func processSecondVideo(_ url: URL) {
-        // Create model for second video
-        let secondVM = VideoPlayerViewModel(
-            videoURL: url,
-            videoSource: .secondary
-        )
-        
-        self.secondVideoVM = secondVM
-        
-        // Wait for the second video to be ready
-        secondVM.$isVideoReady
-            .dropFirst()
-            .sink { isReady in
-                if isReady && self.videoVM?.isVideoReady == true {
-                    // Navigate to comparison view when both videos are ready
-                    DispatchQueue.main.async {
-                        self.navigateToComparison = true
-                    }
-                }
-            }
-            .store(in: &cancellables)
-    }
-    
-    // Function to compare with model video
-    private func compareWithModelVideo() {
-        // Use ModelVideoLoader to get the model video
-        let modelLoader = ModelVideoLoader.shared
-        
-        // Get model video for this specific technique
-        guard let newModelVM = modelLoader.createModelVideoViewModel(for: technique.name) else {
-            // Show an alert to the user
-            let alert = UIAlertController(
-                title: "Model Video Not Available",
-                message: "The model video for \(technique.name) could not be loaded. Please try again later.",
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
+    // `processedVideoView` now uses `PoseOverlayView` which takes 3D poses from `viewModel`
+    // and the `videoActualRect` for correct 2D projection.
+    private func processedVideoView(viewModel: VideoPlayerViewModel, videoActualRect: Binding<CGRect>) -> some View {
+        VStack(spacing: 12) {
+            Text(LocalizedStringKey("Your Analyzed Video"))
+                .font(.headline).foregroundColor(ColorManager.textPrimary)
             
-            DispatchQueue.main.async {
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootViewController = windowScene.windows.first?.rootViewController {
-                    rootViewController.present(alert, animated: true)
+            VideoPlayerRepresentable(player: viewModel.player, videoRect: videoActualRect)
+                .frame(height: 300).cornerRadius(12)
+                // PoseOverlayView now gets 3D poses from viewModel but renders them in 2D using videoActualRect.
+                .overlay(PoseOverlayView(viewModel: viewModel, videoActualRect: videoActualRect.wrappedValue))
+                .background(Color.black) // Ensures black bars if video aspect ratio differs from frame.
+                .onAppear { viewModel.play() }
+                .onDisappear { viewModel.pause() }
+            
+            HStack { // Playback controls
+                Button(action: { viewModel.restart() }) { Image(systemName: "arrow.clockwise.circle.fill") }
+            }.font(.title).padding().foregroundColor(ColorManager.accentColor)
+        }
+        .padding(.horizontal)
+    }
+
+    private func comparisonOptionsView(primaryVM: VideoPlayerViewModel) -> some View { /* ... as before ... */
+        VStack(spacing: 16) {
+            Text(LocalizedStringKey("Next Steps"))
+                .font(.title3).fontWeight(.semibold).foregroundColor(ColorManager.textPrimary)
+
+            uploadButton(isComparisonUpload: true) // Button to upload a comparison video
+
+            if technique.hasModelVideo { // If a model video is available for this technique
+                Button {
+                    // Ensure primary video's 3D frame data is available before comparing with model
+                    guard primaryVideoServerFrames != nil else {
+                        analysisError = "Primary video 3D data not available for model comparison."
+                        return
+                    }
+                    handleCompareWithModelVideo(primaryUserVM: primaryVM)
+                } label: {
+                    Label(LocalizedStringKey("Compare with Model Video"), systemImage: "person.crop.square.filled.and.at.rectangle")
+                        .font(.headline).padding().frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered).tint(ColorManager.accentColor)
             }
+            
+            Button(LocalizedStringKey("Re-upload Primary Video")) {
+                resetToInitialUploadState()
+                showUploadOptions = true
+            }
+            .padding(.top, 10)
+            .foregroundColor(ColorManager.accentColor)
+        }
+        .padding(.horizontal)
+    }
+
+    private var keyPointsSection: some View { /* ... as before ... */
+        VStack(alignment: .leading, spacing: 16) {
+            Text(LocalizedStringKey(String(format: NSLocalizedString("Key Points for %@", comment: ""), technique.name)))
+                .font(.headline).foregroundColor(ColorManager.textPrimary)
+            KeyPointRow(icon: "figure.play", text: "Start with proper stance, feet shoulder-width apart.")
+            KeyPointRow(icon: "hand.raised", text: "Grip the racket with a relaxed, comfortable hold.")
+            KeyPointRow(icon: "arrow.up.and.down.and.arrow.left.and.right", text: "Maintain balance throughout the motion.")
+            KeyPointRow(icon: "eye", text: "Keep your eye on the shuttle at all times.")
+            KeyPointRow(icon: "figure.walk", text: "Follow through with your swing for better control.")
+        }
+        .padding().background(RoundedRectangle(cornerRadius: 12).fill(ColorManager.cardBackground)).padding(.horizontal)
+    }
+
+    // Navigation destination for comparison view.
+    // TechniqueComparisonView will receive ViewModels that now manage 3D pose data.
+    @ViewBuilder
+    private func navigationDestinationView() -> some View {
+        if let userVM = videoVMContainer.viewModel,
+           let compVM = comparisonVideoVMContainer.viewModel,
+           userVM.isVideoReady, compVM.isVideoReady,
+           let userFrames = primaryVideoServerFrames, // These are [ServerFrameData] with 3D joints
+           let compFrames = comparisonVideoServerFrames { // These are [ServerFrameData] with 3D joints
+            
+            // Pass the ViewModels (which contain 3D poses) and the 2D analysis result.
+            TechniqueComparisonView(
+                technique: technique,
+                userVideoViewModel: userVM,   // ViewModel now has 3D poses in .poses
+                modelVideoViewModel: compVM,  // ViewModel now has 3D poses in .poses
+                analysisResult: comparisonAnalysisResult // This is still the 2D swing analysis
+            )
+        } else {
+            ProgressView(LocalizedStringKey("Preparing comparison view..."))
+        }
+    }
+
+    // MARK: - Video Handling & Analysis Logic
+    // These functions now trigger analysis that returns 3D pose data.
+    // The VideoPlayerViewModel's `setServerProcessedJoints` method is updated to handle this 3D data.
+
+    private func handlePrimaryVideoSelected(_ url: URL) {
+        isVideoBeingUploadedOrProcessed = true
+        processingStatusMessage = NSLocalizedString("Uploading & Analyzing Primary Video (3D)...", comment: "") // Updated message
+        analysisError = nil
+        shouldShowProcessedPrimaryVideo = false
+        primaryVideoActualRect = .zero // Reset rect for the new video
+        
+        videoVMContainer.viewModel?.cleanup() // Clean up previous VM
+        videoVMContainer.viewModel = nil
+        primaryVideoServerFrames = nil
+
+        // Call analysis service; it now returns VideoAnalysisResponse with 3D jointDataPerFrame.
+        analysisService.analyzeVideoByUploading(videoURL: url, dominantSide: "Right")
+            .sink(receiveCompletion: { completion in
+                self.isVideoBeingUploadedOrProcessed = false
+                if case let .failure(error) = completion {
+                    self.analysisError = "Failed to analyze primary video (3D): \(error.localizedDescription)"
+                    self.shouldShowProcessedPrimaryVideo = false
+                }
+            }, receiveValue: { response in // response.jointDataPerFrame contains 3D data
+                print("Primary video 3D analysis successful. Received \(response.totalFrames) frames.")
+                self.primaryVideoServerFrames = response.jointDataPerFrame // Store 3D server frames
+                
+                let newVM = VideoPlayerViewModel(videoURL: url, videoSource: .primary)
+                newVM.setServerProcessedJoints(response.jointDataPerFrame) // VM processes 3D data
+                self.videoVMContainer.viewModel = newVM
+                
+                self.listenForVMReadyAndSetShowFlag(vm: newVM, isPrimary: true)
+            })
+            .store(in: &cancellables)
+    }
+
+    private func handleComparisonVideoSelected(_ url: URL) {
+        // Similar to handlePrimaryVideoSelected, but for the comparison video.
+        isVideoBeingUploadedOrProcessed = true
+        processingStatusMessage = NSLocalizedString("Uploading & Analyzing Comparison Video (3D)...", comment: "")
+        analysisError = nil
+        
+        comparisonVideoVMContainer.viewModel?.cleanup()
+        comparisonVideoVMContainer.viewModel = nil
+        comparisonVideoServerFrames = nil
+
+        analysisService.analyzeVideoByUploading(videoURL: url, dominantSide: "Right")
+            .sink(receiveCompletion: { completion in
+                self.isVideoBeingUploadedOrProcessed = false
+                if case let .failure(error) = completion {
+                    self.analysisError = "Failed to analyze comparison video (3D): \(error.localizedDescription)"
+                }
+            }, receiveValue: { response in
+                print("Comparison video 3D analysis successful. Received \(response.totalFrames) frames.")
+                self.comparisonVideoServerFrames = response.jointDataPerFrame
+                
+                let newCompVM = VideoPlayerViewModel(videoURL: url, videoSource: .secondary)
+                newCompVM.setServerProcessedJoints(response.jointDataPerFrame)
+                self.comparisonVideoVMContainer.viewModel = newCompVM
+
+                self.listenForVMReadyAndSetShowFlag(vm: newCompVM, isPrimary: false)
+            })
+            .store(in: &cancellables)
+    }
+    
+    private func handleCompareWithModelVideo(primaryUserVM: VideoPlayerViewModel) {
+        // Similar logic, but loads and analyzes the pre-defined model video.
+        guard let modelVideoURL = ModelVideoLoader.shared.getModelVideoURL(for: technique.name) else {
+            analysisError = "Model video for \(technique.name) not found."
+            return
+        }
+        // Ensure primary user video's 3D data is available.
+        guard self.primaryVideoServerFrames != nil else {
+            analysisError = "Primary video 3D data is missing for model comparison."
             return
         }
         
-        // Store the model view model and navigate
-        self.isForComparison = false // Not using second user video
-        self.modelVM = newModelVM
-        self.navigateToComparison = true
+        isVideoBeingUploadedOrProcessed = true
+        processingStatusMessage = NSLocalizedString("Processing Model Video (3D)...", comment: "")
+        analysisError = nil
+
+        comparisonVideoVMContainer.viewModel?.cleanup()
+        comparisonVideoVMContainer.viewModel = nil
+        comparisonVideoServerFrames = nil
+        
+        analysisService.analyzeVideoByUploading(videoURL: modelVideoURL, dominantSide: "Right")
+            .sink(receiveCompletion: { completion in
+                self.isVideoBeingUploadedOrProcessed = false
+                if case let .failure(error) = completion {
+                    self.analysisError = "Failed to analyze model video (3D): \(error.localizedDescription)"
+                }
+            }, receiveValue: { response in
+                print("Model video 3D analysis successful. Received \(response.totalFrames) frames.")
+                self.comparisonVideoServerFrames = response.jointDataPerFrame
+                
+                let newModelVM = VideoPlayerViewModel(videoURL: modelVideoURL, videoSource: .secondary)
+                newModelVM.setServerProcessedJoints(response.jointDataPerFrame)
+                self.comparisonVideoVMContainer.viewModel = newModelVM
+                
+                self.listenForVMReadyAndSetShowFlag(vm: newModelVM, isPrimary: false)
+            })
+            .store(in: &cancellables)
+    }
+
+    // `listenForVMReadyAndSetShowFlag` remains largely the same.
+    // It waits for VideoPlayerViewModel to be ready and have poses (which are now 3D).
+    private func listenForVMReadyAndSetShowFlag(vm: VideoPlayerViewModel, isPrimary: Bool) {
+        var readyCancellable: AnyCancellable?
+        readyCancellable = vm.$isVideoReady
+            .combineLatest(vm.$accumulatedPoses.map { !$0.isEmpty }) // accumulatedPoses is now 3D
+            .filter { $0.0 && $0.1 } // Video ready AND poses available
+            .first() // Only take the first time this condition is met
+            .sink { [weak vmInstance = vm] _ in // Capture vm weakly
+                guard vmInstance != nil else {
+                    readyCancellable?.cancel()
+                    return
+                }
+                if isPrimary {
+                    print("Primary VM (handling 3D data) is ready and poses are set.")
+                    self.shouldShowProcessedPrimaryVideo = true
+                } else { // This is for comparison or model video
+                    print("Comparison/Model VM (handling 3D data) is ready and poses are set.")
+                    // Slight delay before triggering comparison to ensure UI updates settle.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        self.triggerTechniqueComparison()
+                    }
+                }
+                readyCancellable?.cancel() // Clean up the cancellable
+            }
+        if let rc = readyCancellable { self.cancellables.insert(rc) }
+    }
+
+    // `triggerTechniqueComparison` sends 3D frame data to the server.
+    // The server performs 2D swing analysis and returns ComparisonResult.
+    private func triggerTechniqueComparison() {
+        guard let userFrames = primaryVideoServerFrames, // These are [ServerFrameData] with 3D joints
+              let modelFrames = comparisonVideoServerFrames else { // These are [ServerFrameData] with 3D joints
+            analysisError = "One or both 3D video data sets are missing for comparison."
+            isFetchingComparisonAnalysis = false; return
+        }
+        // Ensure ViewModels are ready.
+        guard let userVM = videoVMContainer.viewModel, userVM.isVideoReady,
+              let modelVM = comparisonVideoVMContainer.viewModel, modelVM.isVideoReady else {
+            analysisError = "Video players not ready for comparison (using 3D data).";
+            isFetchingComparisonAnalysis = false; return
+        }
+
+        isFetchingComparisonAnalysis = true; analysisError = nil
+        
+        // Call service: it sends 3D frames, but server's swing analysis logic is still 2D.
+        analysisService.requestTechniqueComparison(
+            userFrames: userFrames,
+            modelFrames: modelFrames,
+            dominantSide: "Right"
+        )
+        .sink(receiveCompletion: { completion in
+            self.isFetchingComparisonAnalysis = false
+            if case let .failure(error) = completion {
+                self.analysisError = "Technique comparison (from 3D data input) failed: \(error.localizedDescription)"
+                 print("Comparison request error: \(error)")
+            }
+        }, receiveValue: { result in // `result` is ComparisonResult based on 2D server-side analysis
+            self.comparisonAnalysisResult = result
+            self.navigateToComparisonView = true // Trigger navigation
+            print("Technique comparison successful (from 3D data input). Navigating.")
+        })
+        .store(in: &cancellables)
     }
 }
 
-// Helper View for Key Points
-struct KeyPointRow: View {
-    let icon: String
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(ColorManager.accentColor)
-                .frame(width: 24, height: 24)
-            
-            Text(text)
-                .font(.subheadline)
-                .foregroundColor(ColorManager.textPrimary)
-            
-            Spacer()
-        }
-    }
-}
+class VideoVMContainer: ObservableObject { @Published var viewModel: VideoPlayerViewModel? }
