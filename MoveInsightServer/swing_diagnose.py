@@ -8,6 +8,7 @@
 #   6. **hip_forward_shift**: Hip moves forward during the swing.
 #   7. **trunk_rotation_completed**: Is the trunk rotation sufficient during the swing?
 
+from typing import Dict, List
 import numpy as np
 # IMPORTANT: This script currently processes 2D keypoints (x, y).
 # If 3D keypoints (x, y, z) are passed from the server, 

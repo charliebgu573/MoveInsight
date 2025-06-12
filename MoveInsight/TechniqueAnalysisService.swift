@@ -45,12 +45,27 @@ struct TechniqueComparisonRequestData: Codable {
 // struct ComparisonResult: Codable { ... }
 
 class TechniqueAnalysisService {
-    // Ensure this URL points to your server's correct IP/domain and port
-    private let serverBaseURL = URL(string: "http://115.188.74.78:8000")!
+    // Computed property to get the server base URL dynamically
+    private var serverBaseURL: URL? {
+        guard let baseIP = UserDefaults.standard.string(forKey: "serverBaseIP"), !baseIP.isEmpty else {
+            print("🚨 ERROR: Server base IP not configured or is empty in UserDefaults.")
+            return nil
+        }
+        // Ensure "http://" is not accidentally included by the user in the IP input
+        let sanitizedIP = baseIP.replacingOccurrences(of: "http://", with: "").replacingOccurrences(of: "https://", with: "")
+        return URL(string: "http://\(sanitizedIP):8000")
+    }
+
+    private func createConfigurationErrorPublisher<T>() -> AnyPublisher<T, Error> {
+        return Fail(error: NSError(domain: "ConfigurationError", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Server IP not configured. Please set it in the app settings."])).eraseToAnyPublisher()
+    }
 
     // Function to upload a single video and get its joint data (now 3D)
     func analyzeVideoByUploading(videoURL: URL, dominantSide: String) -> AnyPublisher<VideoAnalysisResponse, Error> {
-        let endpoint = serverBaseURL.appendingPathComponent("/analyze/video_upload/")
+        guard let baseURL = serverBaseURL else {
+            return createConfigurationErrorPublisher()
+        }
+        let endpoint = baseURL.appendingPathComponent("/analyze/video_upload/") //
         
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
@@ -62,7 +77,7 @@ class TechniqueAnalysisService {
         
         // Add dominant_side part
         httpBody.append("--\(boundary)\r\n".data(using: .utf8)!)
-        httpBody.append("Content-Disposition: form-data; name=\"dominant_side\"\r\n\r\n".data(using: .utf8)!)
+        httpBody.append("Content-Disposition: form-data; name=\"dominant_side\"\r\n\r\n".data(using: .utf8)!) //
         httpBody.append("\(dominantSide)\r\n".data(using: .utf8)!)
         
         // Add video file part
@@ -70,11 +85,11 @@ class TechniqueAnalysisService {
             let videoData = try Data(contentsOf: videoURL)
             let filename = videoURL.lastPathComponent
             // Mimetype for mp4. Consider making this more dynamic if other formats are supported.
-            let mimetype = "video/mp4"
+            let mimetype = "video/mp4" //
             
             httpBody.append("--\(boundary)\r\n".data(using: .utf8)!)
-            httpBody.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
-            httpBody.append("Content-Type: \(mimetype)\r\n\r\n".data(using: .utf8)!)
+            httpBody.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!) //
+            httpBody.append("Content-Type: \(mimetype)\r\n\r\n".data(using: .utf8)!) //
             httpBody.append(videoData)
             httpBody.append("\r\n".data(using: .utf8)!)
         } catch {
@@ -102,10 +117,6 @@ class TechniqueAnalysisService {
                     }
                     throw URLError(.init(rawValue: httpResponse.statusCode), userInfo: [NSLocalizedDescriptionKey: "Server returned status \(httpResponse.statusCode) for 3D video upload"])
                 }
-                // For debugging the raw response:
-                // if let jsonString = String(data: output.data, encoding: .utf8) {
-                //    print("Raw server response (3D upload): \(jsonString.prefix(2000))") // Log more characters
-                // }
                 return output.data
             }
             .decode(type: VideoAnalysisResponse.self, decoder: JSONDecoder())
@@ -121,7 +132,10 @@ class TechniqueAnalysisService {
         dominantSide: String
     ) -> AnyPublisher<ComparisonResult, Error> { // ComparisonResult is still based on 2D analysis
         
-        let endpoint = serverBaseURL.appendingPathComponent("/analyze/technique_comparison/")
+        guard let baseURL = serverBaseURL else {
+            return createConfigurationErrorPublisher()
+        }
+        let endpoint = baseURL.appendingPathComponent("/analyze/technique_comparison/") //
         print("Requesting technique comparison (with 3D frame data input) from: \(endpoint)")
 
         var request = URLRequest(url: endpoint)
