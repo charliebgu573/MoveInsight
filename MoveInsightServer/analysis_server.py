@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
 import logging
 import time
@@ -276,11 +276,11 @@ async def analyze_technique_comparison(data: TechniqueComparisonRequestDataModel
             'RightShoulder', 'LeftShoulder', 'RightElbow', 'LeftElbow', 'RightWrist',
             'RightHip', 'LeftHip', 'RightHeel', 'RightToe', 'LeftHeel', 'LeftToe'
     ]
-    default_swing_rules_keys = list(ComparisonResultModel.model_fields['user_details'].default.keys() if ComparisonResultModel.model_fields['user_details'].default else [
-            'shoulder_abduction', 'elbow_flexion', 'elbow_lower', 
-            'foot_direction_aligned', 'proximal_to_distal_sequence', 
-            'hip_forward_shift', 'trunk_rotation_completed'
-        ])
+    default_swing_rules_keys = [
+        'shoulder_abduction', 'elbow_flexion', 'elbow_lower', 
+        'foot_direction_aligned', 'proximal_to_distal_sequence', 
+        'hip_forward_shift', 'trunk_rotation_completed'
+    ]
 
 
     def get_2d_slice_for_swing(kp_3d_aligned: Dict[str, np.ndarray], frame_count_val: int, req_keys: List[str]) -> Tuple[Dict[str, np.ndarray], bool]:
