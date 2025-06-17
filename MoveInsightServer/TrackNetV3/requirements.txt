@@ -1,0 +1,8 @@
+dash
+numpy
+opencv_python
+pandas
+Pillow
+plotly
+torch
+parse
