@@ -2,7 +2,7 @@ import os
 import torch
 import argparse
 
-from test import test
+from tracknet_test import test
 from utils.general import get_model
 
 

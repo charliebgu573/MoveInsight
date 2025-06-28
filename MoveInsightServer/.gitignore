@@ -1,0 +1,15 @@
+# Build directories
+build/
+court-detection/build/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Model checkpoints
+ckpts/
+
+# Temporary files
+*.tmp
+*.log

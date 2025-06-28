@@ -150,6 +150,9 @@ def change_dropdown(eval_file_1, eval_file_2, rally_key):
     assert os.path.exists(os.path.join(data_dir, split, f'match{match_id}', csv_dir, f'{rally_id}_ball.csv'))
     csv_file = os.path.join(data_dir, split, f'match{match_id}', csv_dir, f'{rally_id}_ball.csv')
     label_df = pd.read_csv(csv_file, encoding='utf8')
+    # Ensure Frame column is integer type to avoid type comparison issues
+    if 'Frame' in label_df.columns:
+        label_df['Frame'] = label_df['Frame'].astype(int)
     x_gt, y_gt, vis_gt = np.array(label_df['X']), np.array(label_df['Y']), np.array(label_df['Visibility'])
     
     # Time series plot

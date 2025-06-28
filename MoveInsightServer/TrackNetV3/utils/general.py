@@ -209,7 +209,10 @@ def generate_frames(video_file):
             frame_list (List[numpy.ndarray]): List of sampled frames
     """
 
-    assert video_file[-4:] == '.mp4', 'Invalid video file format.'
+    # Check if video file has a valid extension
+    valid_extensions = ['.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm', '.m4v']
+    file_ext = os.path.splitext(video_file)[1].lower()
+    assert file_ext in valid_extensions, f'Invalid video file format. Supported formats: {", ".join(valid_extensions)}'
 
     # Get camera parameters
     cap = cv2.VideoCapture(video_file)
@@ -280,7 +283,8 @@ def write_pred_video(video_file, pred_dict, save_file, traj_len=8, label_df=None
     # Read prediction result
     x_pred, y_pred, vis_pred = pred_dict['X'], pred_dict['Y'], pred_dict['Visibility']
 
-    # Video config
+    # Video config - use mp4v codec for better compatibility
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(save_file, fourcc, fps, (w, h))
     
     # Create a queue for storing trajectory
@@ -416,6 +420,8 @@ def convert_gt_to_coco_json(data_dir, split, drop=False):
         match_id = match_dir.split('match')[-1]
         csv_file = os.path.join(match_dir, 'corrected_csv', f'{rally_id}_ball.csv') if split == 'test' else os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
         label_df = pd.read_csv(csv_file, encoding='utf8')
+        # Ensure Frame column is integer type to avoid type comparison issues
+        label_df['Frame'] = label_df['Frame'].astype(int)
         f, x, y, v = label_df['Frame'].values, label_df['X'].values, label_df['Y'].values, label_df['Visibility'].values
         if split == 'test' and drop:
             rally_key = f'{match_id}_{rally_id}'
@@ -472,6 +478,8 @@ def generate_data_frames(video_file):
     match_dir, rally_id = parse.parse(file_format_str, video_file)
     csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
     label_df = pd.read_csv(csv_file, encoding='utf8')
+    # Ensure Frame column is integer type to avoid type comparison issues
+    label_df['Frame'] = label_df['Frame'].astype(int)
     assert os.path.exists(video_file) and os.path.exists(csv_file), 'Video file or csv file does not exist.'
 
     rally_dir = os.path.join(match_dir, 'frame', rally_id)
@@ -480,6 +488,8 @@ def generate_data_frames(video_file):
         os.makedirs(rally_dir)
     else:
         label_df = pd.read_csv(csv_file, encoding='utf8')
+        # Ensure Frame column is integer type to avoid type comparison issues  
+        label_df['Frame'] = label_df['Frame'].astype(int)
         if len(list_dirs(rally_dir)) < len(label_df):
             # Some error has occured, remove the directory and process again
             shutil.rmtree(rally_dir)

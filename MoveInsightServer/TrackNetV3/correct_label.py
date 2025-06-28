@@ -132,6 +132,9 @@ def change_dropdown(eval_file, rally_key):
     # Read ground truth label
     csv_gt = os.path.join(data_dir, split, f'match{match_id}', 'csv', f'{rally_id}_ball.csv')
     gt_df = pd.read_csv(csv_gt, encoding='utf8')
+    # Ensure Frame column is integer type to avoid type comparison issues
+    if 'Frame' in gt_df.columns:
+        gt_df['Frame'] = gt_df['Frame'].astype(int)
     x_gt, y_gt, vis_gt = np.array(gt_df['X']), np.array(gt_df['Y']), np.array(gt_df['Visibility'])
 
     # Init correct result

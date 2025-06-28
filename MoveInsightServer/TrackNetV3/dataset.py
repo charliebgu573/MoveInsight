@@ -226,7 +226,10 @@ class Shuttlecock_Trajectory_Dataset(Dataset):
                 csv_file = os.path.join(match_dir, 'csv', f'{rally_id}_ball.csv')
             
             assert os.path.exists(csv_file), f'{csv_file} does not exist.'
-            label_df = pd.read_csv(csv_file, encoding='utf8').sort_values(by='Frame').fillna(0)
+            label_df = pd.read_csv(csv_file, encoding='utf8')
+            # Ensure Frame column is integer type to avoid type comparison issues
+            label_df['Frame'] = label_df['Frame'].astype(int)
+            label_df = label_df.sort_values(by='Frame').fillna(0)
 
             f_file = np.array([os.path.join(rally_dir, f'{f_id}.{IMG_FORMAT}') for f_id in label_df['Frame']])
             x, y, v = np.array(label_df['X']), np.array(label_df['Y']), np.array(label_df['Visibility'])
@@ -272,7 +275,10 @@ class Shuttlecock_Trajectory_Dataset(Dataset):
             # Read predicted csv file
             pred_csv_file = os.path.join(match_dir, 'predicted_csv', f'{rally_id}_ball.csv')
             assert os.path.exists(pred_csv_file), f'{pred_csv_file} does not exist.'
-            pred_df = pd.read_csv(pred_csv_file, encoding='utf8').sort_values(by='Frame').fillna(0)
+            pred_df = pd.read_csv(pred_csv_file, encoding='utf8')
+            # Ensure Frame column is integer type to avoid type comparison issues
+            pred_df['Frame'] = pred_df['Frame'].astype(int)
+            pred_df = pred_df.sort_values(by='Frame').fillna(0)
 
             f_file = np.array([os.path.join(rally_dir, f'{f_id}.{IMG_FORMAT}') for f_id in pred_df['Frame']])
             x, y, v = np.array(pred_df['X_GT']), np.array(pred_df['Y_GT']), np.array(pred_df['Visibility_GT'])
