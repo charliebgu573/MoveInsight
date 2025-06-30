@@ -103,17 +103,17 @@ def create_top_down_court_template(width: int = TOP_DOWN_COURT_WIDTH,
     Returns:
         Court template image as numpy array
     """
-    # Create blank court image (green background)
+    # Create blank court image (white background)
     court_img = np.zeros((height, width, 3), dtype=np.uint8)
-    court_img[:] = (34, 139, 34)  # Forest green background
+    court_img[:] = (255, 255, 255)  # White background
     
     # Calculate court dimensions in pixels
     court_width_m = BADMINTON_COURT_WIDTH if court_type == 'doubles' else BADMINTON_COURT_WIDTH_SINGLES
     pixels_per_meter_x = width / court_width_m
     pixels_per_meter_y = height / BADMINTON_COURT_LENGTH
     
-    # Line color (white)
-    line_color = (255, 255, 255)
+    # Line color (black)
+    line_color = (0, 0, 0)
     line_thickness = 2
     
     # Court boundaries
@@ -152,9 +152,15 @@ def create_top_down_court_template(width: int = TOP_DOWN_COURT_WIDTH,
         lower_long_service_y = height - 1 - long_service_offset_pixels
         cv2.line(court_img, (0, lower_long_service_y), (width-1, lower_long_service_y), line_color, line_thickness)
     
-    # Center line (vertical)
+    # Center line (vertical) - CORRECTED: should not cross the net
     center_x = width // 2
-    cv2.line(court_img, (center_x, 0), (center_x, height-1), line_color, line_thickness)
+    
+    # Draw center line in two segments: from baselines to service lines (not crossing net)
+    # Upper segment: from top boundary to upper short service line
+    cv2.line(court_img, (center_x, 0), (center_x, upper_service_y), line_color, line_thickness)
+    
+    # Lower segment: from lower short service line to bottom boundary  
+    cv2.line(court_img, (center_x, lower_service_y), (center_x, height-1), line_color, line_thickness)
     
     # Service court divisions for doubles
     if court_type == 'doubles':
@@ -298,60 +304,97 @@ def calculate_real_world_distance(point1: Tuple[float, float],
 
 def create_player_trail_visualization(court_template: np.ndarray,
                                     player_positions: List[List[Tuple[float, float]]],
-                                    colors: Optional[List[Tuple[int, int, int]]] = None) -> np.ndarray:
+                                    colors: Optional[List[Tuple[int, int, int]]] = None,
+                                    current_distances: Optional[List[float]] = None) -> np.ndarray:
     """
-    Create visualization of player movements on the court template.
+    Create visualization of player movements on the court template with smooth trails.
     
     Args:
         court_template: Base court template image
         player_positions: List of position lists for each player [(x1,y1), (x2,y2), ...]
         colors: Optional list of colors for each player
+        current_distances: Optional list of current distances moved for each player
         
     Returns:
         Court image with player trails overlaid
     """
     result_img = court_template.copy()
     
-    # Default colors for players
+    # Default colors for players (darker colors for white background, BGR format)
     if colors is None:
         colors = [
-            (255, 0, 0),    # Red for player 1
-            (0, 0, 255),    # Blue for player 2
-            (0, 255, 0),    # Green for player 3
-            (255, 255, 0),  # Yellow for player 4
+            (0, 0, 180),    # Red for player 1
+            (180, 0, 0),    # Blue for player 2
+            (0, 120, 0),    # Green for player 3
+            (0, 120, 180),  # Orange for player 4
         ]
     
     for player_idx, positions in enumerate(player_positions):
-        if not positions:
+        if not positions or len(positions) < 2:
             continue
             
         color = colors[player_idx % len(colors)]
         
-        # Draw trail lines
-        for i in range(1, len(positions)):
-            pt1 = (int(positions[i-1][0]), int(positions[i-1][1]))
-            pt2 = (int(positions[i][0]), int(positions[i][1]))
-            cv2.line(result_img, pt1, pt2, color, 2)
-        
-        # Draw position markers with fade effect
-        for i, pos in enumerate(positions):
-            alpha = 0.3 + 0.7 * (i / len(positions))  # Fade from 30% to 100%
-            radius = max(3, int(6 * alpha))
+        # Create smooth trail using cubic interpolation for better smoothness
+        if len(positions) >= 4:
+            # Convert positions to numpy array for processing
+            pos_array = np.array(positions)
             
-            # Draw semi-transparent circles
-            overlay = result_img.copy()
-            cv2.circle(overlay, (int(pos[0]), int(pos[1])), radius, color, -1)
-            cv2.addWeighted(result_img, 1 - alpha * 0.5, overlay, alpha * 0.5, 0, result_img)
+            # Create smooth path using spline interpolation
+            from scipy import interpolate
+            try:
+                # Create parameter array for interpolation
+                t = np.linspace(0, 1, len(positions))
+                t_smooth = np.linspace(0, 1, len(positions) * 3)  # 3x more points for smoothness
+                
+                # Interpolate x and y coordinates separately
+                fx = interpolate.interp1d(t, pos_array[:, 0], kind='cubic', bounds_error=False, fill_value='extrapolate')
+                fy = interpolate.interp1d(t, pos_array[:, 1], kind='cubic', bounds_error=False, fill_value='extrapolate')
+                
+                smooth_x = fx(t_smooth)
+                smooth_y = fy(t_smooth)
+                
+                # Draw smooth trail with varying thickness
+                for i in range(1, len(smooth_x)):
+                    progress = i / len(smooth_x)
+                    thickness = max(1, int(3 * progress))  # Gradually increase thickness
+                    alpha = 0.4 + 0.6 * progress  # Gradually increase opacity
+                    
+                    pt1 = (int(smooth_x[i-1]), int(smooth_y[i-1]))
+                    pt2 = (int(smooth_x[i]), int(smooth_y[i]))
+                    
+                    # Create overlay for transparency effect
+                    overlay = result_img.copy()
+                    cv2.line(overlay, pt1, pt2, color, thickness)
+                    cv2.addWeighted(result_img, 1 - alpha * 0.3, overlay, alpha * 0.3, 0, result_img)
+                    
+            except ImportError:
+                # Fallback to simple line drawing if scipy not available
+                for i in range(1, len(positions)):
+                    pt1 = (int(positions[i-1][0]), int(positions[i-1][1]))
+                    pt2 = (int(positions[i][0]), int(positions[i][1]))
+                    cv2.line(result_img, pt1, pt2, color, 3)
+        else:
+            # Simple line drawing for few points
+            for i in range(1, len(positions)):
+                pt1 = (int(positions[i-1][0]), int(positions[i-1][1]))
+                pt2 = (int(positions[i][0]), int(positions[i][1]))
+                cv2.line(result_img, pt1, pt2, color, 3)
         
-        # Draw final position with label
+        # Draw current position with label
         if positions:
-            final_pos = positions[-1]
-            cv2.circle(result_img, (int(final_pos[0]), int(final_pos[1])), 8, color, -1)
-            cv2.circle(result_img, (int(final_pos[0]), int(final_pos[1])), 10, (255, 255, 255), 2)
+            current_pos = positions[-1]
+            cv2.circle(result_img, (int(current_pos[0]), int(current_pos[1])), 8, color, -1)
+            cv2.circle(result_img, (int(current_pos[0]), int(current_pos[1])), 10, (0, 0, 0), 2)
             
-            # Add player label
-            label = f"P{player_idx + 1}"
-            cv2.putText(result_img, label, (int(final_pos[0]) + 15, int(final_pos[1]) - 10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            # Add player label with distance if provided
+            if current_distances and player_idx < len(current_distances):
+                distance = current_distances[player_idx]
+                label = f"P{player_idx + 1}: {distance:.1f}m"
+            else:
+                label = f"P{player_idx + 1}"
+            
+            cv2.putText(result_img, label, (int(current_pos[0]) + 15, int(current_pos[1]) - 10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
     
     return result_img

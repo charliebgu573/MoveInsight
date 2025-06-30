@@ -61,7 +61,9 @@ except ImportError as e:
 from court_detection import (
     run_court_detection,
     calculate_court_width_crop_boundaries,
-    crop_video
+    crop_video,
+    point_in_court_polygon,
+    debug_visualize_court_polygon
 )
 
 # --- Import Court Transformation Functions ---
@@ -195,102 +197,7 @@ async def log_requests(request: Request, call_next):
 
 
 # --- API Endpoints ---
-@app.post("/analyze/video_crop/")
-async def analyze_video_crop(
-    file: UploadFile = File(...)
-):
-    """
-    Simplified video crop using only detected court width while preserving full video height.
-    This endpoint detects the badminton court and crops the video to court width 
-    while maintaining the original video height.
-
-    Returns a zip file containing:
-    - Cropped video with court width and full height
-    - Court coordinates txt file with detected key points
-
-    Args:
-        file: Video file to process
-    """
-    logger.info(f"Received video crop request: {file.filename}")
-    
-    temp_dir = tempfile.mkdtemp(prefix="video_crop_")
-    temp_video_path = ""
-    cropped_video_path = ""
-    
-    try:
-        # Save uploaded video
-        video_name = Path(file.filename).stem
-        temp_video_path = os.path.join(temp_dir, f"input_{file.filename}")
-        with open(temp_video_path, "wb") as f:
-            f.write(await file.read())
-        
-        logger.info(f"Video saved to: {temp_video_path}")
-        
-        # Step 1: Run court detection
-        logger.info("Step 1: Running court detection...")
-        court_points = run_court_detection(temp_video_path)
-        if not court_points:
-            raise HTTPException(status_code=400, detail="Court detection failed - no court found in video")
-        
-        logger.info(f"Court detected with {len(court_points)} key points")
-        
-        # Step 2: Calculate simplified crop boundaries (court width + full height)
-        logger.info("Step 2: Calculating simplified crop boundaries (court width + full height)...")
-        crop_x_min, crop_y_min, crop_x_max, crop_y_max = calculate_court_width_crop_boundaries(
-            temp_video_path, court_points
-        )
-        
-        logger.info(f"Final crop boundaries: ({crop_x_min}, {crop_y_min}, {crop_x_max}, {crop_y_max})")
-        
-        # Step 3: Crop the video
-        logger.info("Step 3: Cropping video...")
-        cropped_video_path = os.path.join(temp_dir, f"{video_name}_cropped.mp4")
-        
-        success = crop_video(temp_video_path, cropped_video_path, crop_x_min, crop_y_min, crop_x_max, crop_y_max)
-        if not success:
-            raise HTTPException(status_code=500, detail="Video cropping failed")
-        
-        logger.info(f"Video cropping completed: {cropped_video_path}")
-        
-        # Save court coordinates to txt file
-        court_coords_path = os.path.join(temp_dir, f"{video_name}_court_coordinates.txt")
-        with open(court_coords_path, 'w') as f:
-            f.write("# Court Key Points Coordinates (x, y)\n")
-            f.write("# Format: x;y (one point per line)\n")
-            f.write("# Order: Lower-left, Lower-right, Upper-left, Upper-right, Left-net, Right-net\n")
-            for i, (x, y) in enumerate(court_points):
-                f.write(f"{x};{y}\n")
-        
-        logger.info(f"Court coordinates saved to: {court_coords_path}")
-        
-        # Create zip file with both cropped video and court coordinates
-        zip_path = os.path.join(temp_dir, f"{video_name}_cropped_analysis.zip")
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add cropped video
-            zipf.write(cropped_video_path, f"{video_name}_cropped.mp4")
-            # Add court coordinates
-            zipf.write(court_coords_path, f"{video_name}_court_coordinates.txt")
-        
-        logger.info(f"Created zip file with cropped video and court coordinates: {zip_path}")
-        
-        # Return the zip file
-        return FileResponse(
-            zip_path,
-            media_type="application/zip",
-            filename=f"{video_name}_cropped_analysis.zip",
-            background=None
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error in video crop analysis: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Video crop analysis failed: {str(e)}")
-    
-    finally:
-        # Note: temp_dir cleanup will happen when response is sent
-        pass
+# Note: video_crop endpoint removed - functionality integrated into court_movement endpoint
 
 @app.post("/analyze/pose_tracking/", response_model=VideoAnalysisResponseModel)
 async def analyze_pose_tracking(
@@ -474,369 +381,41 @@ async def analyze_technique_comparison(data: TechniqueComparisonRequestDataModel
     )
 
 
-@app.post("/analyze/shuttlecock_tracking/")
-async def analyze_shuttlecock_tracking(
-    file: UploadFile = File(...),
-    track_trail_length: int = Form(10),
-    eval_mode: str = Form('weight'),
-    batch_size: int = Form(16)
-):
-    """
-    Track shuttlecock trajectory in video using TrackNetV3 and return tracking video with CSV.
-    This endpoint replicates the behavior of predict.py with temporal ensemble.
-    
-    Args:
-        file: Video file to process
-        track_trail_length: Number of recent positions to show in trail (default: 10)
-        eval_mode: Evaluation mode - 'weight', 'average', or 'nonoverlap' (default: 'weight')
-        batch_size: Batch size for inference (default: 16)
-    """
-    if not TRACKNET_AVAILABLE:
-        raise HTTPException(status_code=503, detail="TrackNetV3 dependencies not available")
-    
-    logger.info(f"Received shuttlecock tracking request: {file.filename}, eval_mode: {eval_mode}")
-    
-    # Create temporary directories
-    temp_dir = tempfile.mkdtemp(prefix="shuttlecock_tracking_")
-    temp_video_path = ""
-    temp_csv_path = ""
-    tracked_video_path = ""
-    zip_path = ""
-    
-    try:
-        # Save uploaded video
-        video_name = Path(file.filename).stem
-        temp_video_path = os.path.join(temp_dir, f"input_{file.filename}")
-        with open(temp_video_path, "wb") as f:
-            f.write(await file.read())
-        
-        logger.info(f"Video saved to: {temp_video_path}")
-        
-        # Setup model paths
-        tracknet_model_path = os.path.join(os.path.dirname(__file__), "TrackNetV3", "ckpts", "TrackNet_best.pt")
-        inpaintnet_model_path = os.path.join(os.path.dirname(__file__), "TrackNetV3", "ckpts", "InpaintNet_best.pt")
-        
-        if not os.path.exists(tracknet_model_path):
-            raise HTTPException(status_code=500, detail="TrackNet model not found")
-        
-        # Setup device
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        logger.info(f"Using device: {device}")
-        
-        # Get video properties for image scaling
-        cap = cv2.VideoCapture(temp_video_path)
-        w, h = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        cap.release()
-        w_scaler, h_scaler = w / WIDTH, h / HEIGHT
-        img_scaler = (w_scaler, h_scaler)
-        logger.info(f"Video dimensions: {w}x{h}, scaling: {img_scaler}")
-        
-        # Load TrackNet model
-        tracknet_ckpt = torch.load(tracknet_model_path, map_location=device)
-        tracknet_seq_len = int(tracknet_ckpt['param_dict']['seq_len'])
-        bg_mode = tracknet_ckpt['param_dict']['bg_mode']
-        tracknet = get_model('TrackNet', tracknet_seq_len, bg_mode).to(device)
-        tracknet.load_state_dict(tracknet_ckpt['model'])
-        tracknet.eval()
-        
-        # Load InpaintNet if available
-        inpaintnet = None
-        inpaintnet_seq_len = None
-        if os.path.exists(inpaintnet_model_path):
-            inpaintnet_ckpt = torch.load(inpaintnet_model_path, map_location=device)
-            inpaintnet_seq_len = int(inpaintnet_ckpt['param_dict']['seq_len'])
-            inpaintnet = get_model('InpaintNet').to(device)
-            inpaintnet.load_state_dict(inpaintnet_ckpt['model'])
-            inpaintnet.eval()
-            logger.info("InpaintNet loaded successfully")
-        
-        # Initialize prediction dictionary with image scaling info
-        tracknet_pred_dict = {'Frame': [], 'X': [], 'Y': [], 'Visibility': [], 'Inpaint_Mask': [],
-                             'Img_scaler': img_scaler, 'Img_shape': (w, h)}
-        
-        # Run TrackNet prediction with temporal ensemble (matching predict.py)
-        logger.info(f"Running TrackNet prediction with {eval_mode} ensemble...")
-        seq_len = tracknet_seq_len
-        
-        if eval_mode == 'nonoverlap':
-            # Non-overlap sampling (original endpoint behavior)
-            dataset = Video_IterableDataset(temp_video_path, seq_len, seq_len, bg_mode)
-            dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0)
-            
-            for batch_data in dataloader:
-                indices, data = batch_data
-                data = data.to(device, non_blocking=True)
-                
-                with torch.no_grad():
-                    y_pred = tracknet(data.float()).detach().cpu()
-                
-                # Get predictions with proper image scaling
-                batch_pred = predict(indices, y_pred=y_pred, img_scaler=img_scaler)
-                
-                # Accumulate results
-                for key in batch_pred.keys():
-                    tracknet_pred_dict[key].extend(batch_pred[key])
-        else:
-            # Temporal ensemble (weight or average mode)
-            dataset = Video_IterableDataset(temp_video_path, seq_len, 1, bg_mode)
-            dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0)
-            video_len = dataset.video_len
-            logger.info(f"Video length: {video_len} frames")
-            
-            # Initialize ensemble parameters
-            num_sample, sample_count = video_len - seq_len + 1, 0
-            buffer_size = seq_len - 1
-            batch_i = torch.arange(seq_len)
-            frame_i = torch.arange(seq_len - 1, -1, -1)
-            y_pred_buffer = torch.zeros((buffer_size, seq_len, HEIGHT, WIDTH), dtype=torch.float32)
-            weight = get_ensemble_weight(seq_len, eval_mode)
-            
-            from tqdm import tqdm
-            for step, (i, x) in enumerate(tqdm(dataloader, desc="Processing frames")):
-                x = x.float().to(device)
-                b_size, seq_len_curr = i.shape[0], i.shape[1]
-                
-                with torch.no_grad():
-                    y_pred = tracknet(x).detach().cpu()
-                
-                y_pred_buffer = torch.cat((y_pred_buffer, y_pred), dim=0)
-                ensemble_i = torch.empty((0, 1, 2), dtype=torch.float32)
-                ensemble_y_pred = torch.empty((0, 1, HEIGHT, WIDTH), dtype=torch.float32)
-                
-                for b in range(b_size):
-                    if sample_count < buffer_size:
-                        # Incomplete buffer
-                        y_pred_ens = y_pred_buffer[batch_i + b, frame_i].sum(0) / (sample_count + 1)
-                    else:
-                        # General case with ensemble weights
-                        y_pred_ens = (y_pred_buffer[batch_i + b, frame_i] * weight[:, None, None]).sum(0)
-                    
-                    ensemble_i = torch.cat((ensemble_i, i[b][0].reshape(1, 1, 2)), dim=0)
-                    ensemble_y_pred = torch.cat((ensemble_y_pred, y_pred_ens.reshape(1, 1, HEIGHT, WIDTH)), dim=0)
-                    sample_count += 1
-                    
-                    if sample_count == num_sample:
-                        # Handle last frames
-                        y_zero_pad = torch.zeros((buffer_size, seq_len, HEIGHT, WIDTH), dtype=torch.float32)
-                        y_pred_buffer = torch.cat((y_pred_buffer, y_zero_pad), dim=0)
-                        
-                        for f in range(1, seq_len):
-                            y_pred_ens = y_pred_buffer[batch_i + b + f, frame_i].sum(0) / (seq_len - f)
-                            ensemble_i = torch.cat((ensemble_i, i[-1][f].reshape(1, 1, 2)), dim=0)
-                            ensemble_y_pred = torch.cat((ensemble_y_pred, y_pred_ens.reshape(1, 1, HEIGHT, WIDTH)), dim=0)
-                
-                # Get predictions with proper image scaling
-                tmp_pred = predict(ensemble_i, y_pred=ensemble_y_pred, img_scaler=img_scaler)
-                for key in tmp_pred.keys():
-                    tracknet_pred_dict[key].extend(tmp_pred[key])
-                
-                # Update buffer
-                y_pred_buffer = y_pred_buffer[-buffer_size:]
-        
-        # Run InpaintNet if available (matching predict.py)
-        final_pred_dict = tracknet_pred_dict
-        if inpaintnet is not None:
-            logger.info("Running InpaintNet refinement...")
-            from tracknet_test import generate_inpaint_mask
-            tracknet_pred_dict['Inpaint_Mask'] = generate_inpaint_mask(tracknet_pred_dict, th_h=h*0.05)
-            inpaint_pred_dict = {'Frame': [], 'X': [], 'Y': [], 'Visibility': []}
-            
-            if eval_mode == 'nonoverlap':
-                # Simple non-overlap InpaintNet processing
-                from dataset import Shuttlecock_Trajectory_Dataset
-                dataset = Shuttlecock_Trajectory_Dataset(
-                    seq_len=inpaintnet_seq_len, sliding_step=inpaintnet_seq_len, 
-                    data_mode='coordinate', pred_dict=tracknet_pred_dict, padding=True
-                )
-                dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
-                
-                for step, (i, coor_pred, inpaint_mask) in enumerate(dataloader):
-                    coor_pred, inpaint_mask = coor_pred.float(), inpaint_mask.float()
-                    with torch.no_grad():
-                        coor_inpaint = inpaintnet(coor_pred.to(device), inpaint_mask.to(device)).detach().cpu()
-                        coor_inpaint = coor_inpaint * inpaint_mask + coor_pred * (1 - inpaint_mask)
-                    
-                    # Thresholding
-                    th_mask = ((coor_inpaint[:, :, 0] < COOR_TH) & (coor_inpaint[:, :, 1] < COOR_TH))
-                    coor_inpaint[th_mask] = 0.
-                    
-                    # Get predictions
-                    tmp_pred = predict(i, c_pred=coor_inpaint, img_scaler=img_scaler)
-                    for key in tmp_pred.keys():
-                        inpaint_pred_dict[key].extend(tmp_pred[key])
-            
-            final_pred_dict = inpaint_pred_dict if inpaint_pred_dict['Frame'] else tracknet_pred_dict
-        
-        # Get video properties for noise filtering
-        cap_temp = cv2.VideoCapture(temp_video_path)
-        fps = cap_temp.get(cv2.CAP_PROP_FPS) or 30.0
-        cap_temp.release()
-        
-        # Apply enhanced noise filtering with track quality scoring to remove artifacts
-        logger.info("Applying enhanced noise filtering to remove tracking artifacts...")
-        final_pred_dict = apply_noise_filtering(final_pred_dict, fps=fps, video_width=w, video_height=h)
-        
-        if not final_pred_dict['Frame']:
-            logger.warning("No valid shuttlecock tracking data remains after noise filtering")
-            # Create empty CSV and video for consistency
-            temp_csv_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracking.csv")
-            with open(temp_csv_path, 'w') as f:
-                f.write("Frame,X,Y,Visibility\n")
-            
-            # Create zip with empty results
-            zip_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracking.zip")
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                zipf.write(temp_csv_path, f"{video_name}_shuttlecock_tracking.csv")
-            
-            return FileResponse(
-                zip_path,
-                media_type="application/zip",
-                filename=f"{video_name}_shuttlecock_tracking.zip",
-                background=None
-            )
-        
-        # Save filtered trajectory CSV
-        temp_csv_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracking.csv")
-        write_pred_csv(final_pred_dict, temp_csv_path)
-        logger.info(f"Filtered shuttlecock trajectory saved to: {temp_csv_path}")
-        
-        # Create video with tracking overlay
-        logger.info("Creating video with filtered shuttlecock tracking overlay...")
-        tracked_video_path = os.path.join(temp_dir, f"{video_name}_tracked.mp4")
-        
-        # Read original video
-        cap = cv2.VideoCapture(temp_video_path)
-        if not cap.isOpened():
-            raise HTTPException(status_code=500, detail="Cannot open input video")
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
-        # Setup video writer
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(tracked_video_path, fourcc, fps, (width, height))
-        
-        # Process frames with tracking overlay
-        trail_positions = []  # Store recent positions for trail effect
-        frame_idx = 0
-        
-        # Create a lookup dictionary for frame data
-        frame_data_lookup = {}
-        for i in range(len(final_pred_dict['Frame'])):
-            frame_num = int(final_pred_dict['Frame'][i]) if str(final_pred_dict['Frame'][i]).isdigit() else i
-            frame_data_lookup[frame_num] = {
-                'x': float(final_pred_dict['X'][i]) if final_pred_dict['X'][i] != '' else 0,
-                'y': float(final_pred_dict['Y'][i]) if final_pred_dict['Y'][i] != '' else 0,
-                'visibility': float(final_pred_dict['Visibility'][i]) if final_pred_dict['Visibility'][i] != '' else 0
-            }
-        
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            # Get shuttlecock position for this frame
-            if frame_idx in frame_data_lookup:
-                x = frame_data_lookup[frame_idx]['x']
-                y = frame_data_lookup[frame_idx]['y']  
-                visibility = frame_data_lookup[frame_idx]['visibility']
-                
-                # Add to trail if visible
-                if visibility > 0.5 and x > 0 and y > 0:
-                    trail_positions.append((int(x), int(y)))
-                    
-                    # Keep only recent positions for trail
-                    if len(trail_positions) > track_trail_length:
-                        trail_positions.pop(0)
-                    
-                    # Draw trail (fading effect)
-                    for i, (tx, ty) in enumerate(trail_positions):
-                        alpha = (i + 1) / len(trail_positions)  # Fade from 0 to 1
-                        color_intensity = int(255 * alpha)
-                        
-                        # Draw trail point
-                        cv2.circle(frame, (tx, ty), max(2, int(4 * alpha)), 
-                                 (0, color_intensity, 255), -1)
-                    
-                    # Draw current position (larger, brighter)
-                    cv2.circle(frame, (int(x), int(y)), 6, (0, 255, 255), -1)
-                    cv2.circle(frame, (int(x), int(y)), 8, (0, 0, 255), 2)
-                    
-                    # Draw frame number and coordinates
-                    cv2.putText(frame, f"Frame: {frame_idx}", (10, 30), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                    cv2.putText(frame, f"Shuttlecock: ({int(x)}, {int(y)})", (10, 60), 
-                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-            
-            out.write(frame)
-            frame_idx += 1
-            
-            if frame_idx % 100 == 0:
-                logger.info(f"Processed {frame_idx}/{total_frames} frames with tracking overlay")
-        
-        cap.release()
-        out.release()
-        
-        logger.info(f"Tracked video created: {tracked_video_path}")
-        
-        # Create zip file with both tracked video and CSV
-        zip_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracking.zip")
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add tracked video
-            zipf.write(tracked_video_path, f"{video_name}_tracked.mp4")
-            # Add trajectory CSV
-            zipf.write(temp_csv_path, f"{video_name}_shuttlecock_tracking.csv")
-        
-        logger.info(f"Shuttlecock tracking analysis complete. Zip file created: {zip_path}")
-        
-        # Return zip file
-        return FileResponse(
-            zip_path,
-            media_type="application/zip",
-            filename=f"{video_name}_shuttlecock_tracking.zip",
-            background=None
-        )
-        
-    except Exception as e:
-        logger.error(f"Error in shuttlecock tracking analysis: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Shuttlecock tracking analysis failed: {str(e)}")
-    
-    finally:
-        # Cleanup will happen after response is sent
-        pass
+# Note: shuttlecock_tracking endpoint removed - functionality integrated into match_analysis endpoint
 
-@app.post("/analyze/court_movement/")
-async def analyze_court_movement(
+@app.post("/analyze/match_analysis/")
+async def analyze_match_analysis(
     file: UploadFile = File(...),
     num_people: int = Form(2),
     court_type: str = Form("doubles")
 ):
     """
-    Analyze player movements on badminton court with top-down view visualization.
+    Comprehensive badminton match analysis with integrated video processing.
     
-    This endpoint:
-    1. Detects badminton court and creates perspective transformation
-    2. Tracks multiple players throughout the video
+    This enhanced endpoint:
+    1. Detects badminton court and crops video to optimal boundaries
+    2. Tracks multiple players throughout the cropped video with intelligent human blackout
     3. Creates top-down court view with player movement trails
-    4. Creates original video with player pose overlays
-    5. Calculates total distance moved for each player
+    4. Creates blacked video with non-tracked people removed (preserving tracked players)
+    5. Runs shuttlecock tracking on the blacked video for optimal detection
+    6. Calculates total distance moved for each player
     
     Returns a zip file containing:
+    - Blacked video (non-tracked people removed, tracked players preserved)
     - Top-down court movement visualization video
-    - Original video with player pose overlays
-    - Player movement data CSV with positions and distances
-    - Court transformation matrix data
+    - Shuttlecock tracking video with trail overlay
+    - Shuttlecock tracking CSV data
     
     Args:
         file: Video file to process
         num_people: Number of people to track (default: 2)
         court_type: 'doubles' or 'singles' (default: 'doubles')
     """
-    logger.info(f"Received court movement analysis request: {file.filename}, num_people: {num_people}, court_type: {court_type}")
+    logger.info(f"Received match analysis request: {file.filename}, num_people: {num_people}, court_type: {court_type}")
     
-    temp_dir = tempfile.mkdtemp(prefix="court_movement_")
+    temp_dir = tempfile.mkdtemp(prefix="match_analysis_")
     temp_video_path = ""
+    cropped_video_path = ""
     
     try:
         # Save uploaded video
@@ -855,32 +434,65 @@ async def analyze_court_movement(
         
         logger.info(f"Court detected with {len(court_points)} key points")
         
-        # Step 2: Create perspective transformation
-        logger.info("Step 2: Creating perspective transformation...")
+        # Step 2: Crop video based on court detection
+        logger.info("Step 2: Cropping video based on court boundaries...")
+        crop_x_min, crop_y_min, crop_x_max, crop_y_max = calculate_court_width_crop_boundaries(
+            temp_video_path, court_points
+        )
+        
+        logger.info(f"Crop boundaries: ({crop_x_min}, {crop_y_min}, {crop_x_max}, {crop_y_max})")
+        
+        # Crop the video
+        cropped_video_path = os.path.join(temp_dir, f"{video_name}_cropped.mp4")
+        success = crop_video(temp_video_path, cropped_video_path, crop_x_min, crop_y_min, crop_x_max, crop_y_max)
+        if not success:
+            raise HTTPException(status_code=500, detail="Video cropping failed")
+        
+        logger.info(f"Video cropping completed: {cropped_video_path}")
+        
+        # Step 3: Adjust court coordinates for cropped video space
+        logger.info("Step 3: Adjusting court coordinates for cropped video space...")
+        adjusted_court_points = []
+        for x, y in court_points:
+            adjusted_x = x - crop_x_min
+            adjusted_y = y - crop_y_min
+            adjusted_court_points.append((adjusted_x, adjusted_y))
+        
+        logger.info(f"Adjusted court points for cropped video: {adjusted_court_points}")
+        
+        # Save adjusted court coordinates to txt file
+        court_coords_path = os.path.join(temp_dir, f"{video_name}_court_coordinates.txt")
+        with open(court_coords_path, 'w') as f:
+            f.write("# Court Key Points Coordinates for Cropped Video (x, y)\n")
+            f.write("# Format: x;y (one point per line)\n")
+            f.write("# Order: Upper-left, Lower-left, Lower-right, Upper-right, Left-net, Right-net\n")
+            for i, (x, y) in enumerate(adjusted_court_points):
+                f.write(f"{x};{y}\n")
+        
+        logger.info(f"Adjusted court coordinates saved to: {court_coords_path}")
+        
+        # Use adjusted court points and cropped video for the rest of the analysis
+        court_points = adjusted_court_points
+        temp_video_path = cropped_video_path  # Switch to using cropped video
+        
+        # Step 4: Create perspective transformation
+        logger.info("Step 4: Creating perspective transformation...")
         court_corners = get_court_corners_from_keypoints(court_points)
         transform_matrix = get_perspective_transformation_matrix(court_corners)
         
         # Create top-down court template
         court_template = create_top_down_court_template(court_type=court_type)
         
-        # DEBUG: Save a debug image showing the detected court corners
-        debug_court_img_path = os.path.join(temp_dir, f"{video_name}_debug_court_detection.jpg")
+        # DEBUG: Save a debug image showing the detected court polygon
+        debug_court_img_path = os.path.join(temp_dir, f"{video_name}_debug_court_polygon.jpg")
         cap_debug = cv2.VideoCapture(temp_video_path)
         ret_debug, debug_frame = cap_debug.read()
         cap_debug.release()
         
         if ret_debug:
-            # Draw court corners on the image
-            for i, (x, y) in enumerate(court_corners):
-                cv2.circle(debug_frame, (int(x), int(y)), 10, (0, 0, 255), -1)  # Red circles
-                cv2.putText(debug_frame, f"C{i}", (int(x)+15, int(y)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            
-            # Draw lines connecting the corners
-            pts = np.array(court_corners, np.int32)
-            cv2.polylines(debug_frame, [pts], True, (0, 255, 0), 3)  # Green lines
-            
-            cv2.imwrite(debug_court_img_path, debug_frame)
-            logger.info(f"DEBUG: Court detection visualization saved to {debug_court_img_path}")
+            # Use the new debug visualization function for accurate court polygon
+            debug_visualize_court_polygon(debug_frame, court_points, debug_court_img_path)
+            logger.info(f"DEBUG: Court polygon visualization saved to {debug_court_img_path}")
         
         # DEBUG: Test transformation with a few known points
         logger.info("DEBUG: Testing transformation with center court point")
@@ -894,8 +506,8 @@ async def analyze_court_movement(
         expected_center = (court_template.shape[1]/2, court_template.shape[0]/2)
         logger.info(f"Expected center in top-down: {expected_center}")
         
-        # Step 3: Track players throughout video
-        logger.info("Step 3: Tracking player movements...")
+        # Step 5: Track players throughout video with human blackout
+        logger.info("Step 5: Tracking player movements with human blackout...")
         
         # Initialize storage for player positions in top-down view
         player_positions_top_down = [[] for _ in range(num_people)]
@@ -962,73 +574,22 @@ async def analyze_court_movement(
                             lowest_y = max(pos[1] for pos in valid_foot_positions)
                             ground_contact_point = (avg_x, lowest_y)
                             
-                            # Transform to top-down view
-                            top_down_x, top_down_y = transform_point_to_top_down(ground_contact_point, transform_matrix)
+                            # IMPROVED: Check if foot position is within original court polygon first
+                            is_in_court = point_in_court_polygon(ground_contact_point[0], ground_contact_point[1], court_points, margin=30.0)
+                            if frame_idx % 100 == 0:  # Debug logging every 100 frames
+                                logger.debug(f"Frame {frame_idx}: Player {person_idx} foot pos ({ground_contact_point[0]:.1f}, {ground_contact_point[1]:.1f}) - In court: {is_in_court}")
                             
-                            # Validate position is within court bounds
-                            court_template_height, court_template_width = court_template.shape[:2]
-                            if (0 <= top_down_x <= court_template_width and 0 <= top_down_y <= court_template_height):
-                                # Net crossing prevention only - no other movement validation
-                                should_add_position = True
-                                rejection_reason = ""
+                            if is_in_court:
+                                # Transform to top-down view only if within court
+                                top_down_x, top_down_y = transform_point_to_top_down(ground_contact_point, transform_matrix)
                                 
-                                # Calculate net position (middle of court height - Y axis)
-                                net_y_position = court_template_height / 2
-                                current_side = 'top' if top_down_y < net_y_position else 'bottom'
-                                
-                                # Check for net crossing prevention only
-                                if player_sides[person_idx] is not None and player_sides[person_idx] != current_side:
-                                    # Player is trying to cross net - prevent this
-                                    should_add_position = False
-                                    rejection_reason = "net_crossing_prevented"
-                                
-                                if should_add_position:
-                                    # Initialize or update player side
-                                    if player_sides[person_idx] is None:
-                                        player_sides[person_idx] = current_side
-                                        logger.info(f"Player {person_idx} initialized on {current_side} side of net")
-                                    else:
-                                        player_sides[person_idx] = current_side
-                                    
-                                    player_positions_top_down[person_idx].append((top_down_x, top_down_y))
-                                    current_frame_positions.append((top_down_x, top_down_y))
-                                    
-                                    # Calculate distance moved since last frame
-                                    if len(player_positions_top_down[person_idx]) > 1:
-                                        prev_pos = player_positions_top_down[person_idx][-2]
-                                        curr_pos = player_positions_top_down[person_idx][-1]
-                                        distance = calculate_real_world_distance(prev_pos, curr_pos)
-                                        player_distances[person_idx] += distance
-                                else:
-                                    current_frame_positions.append(None)
-                                    if frame_idx % 50 == 0:  # Log occasionally
-                                        logger.debug(f"Frame {frame_idx}: Player {person_idx} position rejected - {rejection_reason}")
-                            else:
-                                current_frame_positions.append(None)
-                        else:
-                            # Fallback: use hip position
-                            fallback_joints = ['LeftHip', 'RightHip']
-                            valid_hip_positions = []
-                            
-                            for joint_name in fallback_joints:
-                                if joint_name in person_joints:
-                                    x, y, z = person_joints[joint_name]
-                                    valid_hip_positions.append((x, y))
-                            
-                            if valid_hip_positions:
-                                avg_x = sum(pos[0] for pos in valid_hip_positions) / len(valid_hip_positions)
-                                avg_y = sum(pos[1] for pos in valid_hip_positions) / len(valid_hip_positions)
-                                
-                                # Transform to top-down view
-                                top_down_x, top_down_y = transform_point_to_top_down((avg_x, avg_y), transform_matrix)
-                                
-                                # Validate position is within court bounds
+                                # Additional validation: ensure top-down position is reasonable  
                                 court_template_height, court_template_width = court_template.shape[:2]
                                 if (0 <= top_down_x <= court_template_width and 0 <= top_down_y <= court_template_height):
                                     # Net crossing prevention only - no other movement validation
                                     should_add_position = True
                                     rejection_reason = ""
-                                    
+                                
                                     # Calculate net position (middle of court height - Y axis)
                                     net_y_position = court_template_height / 2
                                     current_side = 'top' if top_down_y < net_y_position else 'bottom'
@@ -1037,13 +598,13 @@ async def analyze_court_movement(
                                     if player_sides[person_idx] is not None and player_sides[person_idx] != current_side:
                                         # Player is trying to cross net - prevent this
                                         should_add_position = False
-                                        rejection_reason = "net_crossing_prevented_hip"
+                                        rejection_reason = "net_crossing_prevented"
                                     
                                     if should_add_position:
                                         # Initialize or update player side
                                         if player_sides[person_idx] is None:
                                             player_sides[person_idx] = current_side
-                                            logger.info(f"Player {person_idx} initialized on {current_side} side of net (hip)")
+                                            logger.info(f"Player {person_idx} initialized on {current_side} side of net")
                                         else:
                                             player_sides[person_idx] = current_side
                                         
@@ -1059,9 +620,82 @@ async def analyze_court_movement(
                                     else:
                                         current_frame_positions.append(None)
                                         if frame_idx % 50 == 0:  # Log occasionally
-                                            logger.debug(f"Frame {frame_idx}: Player {person_idx} hip position rejected - {rejection_reason}")
+                                            logger.debug(f"Frame {frame_idx}: Player {person_idx} position rejected - {rejection_reason}")
                                 else:
                                     current_frame_positions.append(None)
+                            else:
+                                # Foot position not within court polygon - skip this detection
+                                current_frame_positions.append(None)
+                                if frame_idx % 50 == 0:  # Log occasionally
+                                    logger.debug(f"Frame {frame_idx}: Player {person_idx} foot position outside court polygon - skipped")
+                        else:
+                            # Fallback: use hip position
+                            fallback_joints = ['LeftHip', 'RightHip']
+                            valid_hip_positions = []
+                            
+                            for joint_name in fallback_joints:
+                                if joint_name in person_joints:
+                                    x, y, z = person_joints[joint_name]
+                                    valid_hip_positions.append((x, y))
+                            
+                            if valid_hip_positions:
+                                avg_x = sum(pos[0] for pos in valid_hip_positions) / len(valid_hip_positions)
+                                avg_y = sum(pos[1] for pos in valid_hip_positions) / len(valid_hip_positions)
+                                
+                                # IMPROVED: Check if hip position is within original court polygon first
+                                is_hip_in_court = point_in_court_polygon(avg_x, avg_y, court_points, margin=50.0)
+                                if frame_idx % 100 == 0:  # Debug logging every 100 frames
+                                    logger.debug(f"Frame {frame_idx}: Player {person_idx} hip pos ({avg_x:.1f}, {avg_y:.1f}) - In court: {is_hip_in_court}")
+                                
+                                if is_hip_in_court:
+                                    # Transform to top-down view only if within court
+                                    top_down_x, top_down_y = transform_point_to_top_down((avg_x, avg_y), transform_matrix)
+                                    
+                                    # Additional validation: ensure top-down position is reasonable
+                                    court_template_height, court_template_width = court_template.shape[:2]
+                                    if (0 <= top_down_x <= court_template_width and 0 <= top_down_y <= court_template_height):
+                                        # Net crossing prevention only - no other movement validation
+                                        should_add_position = True
+                                        rejection_reason = ""
+                                        
+                                        # Calculate net position (middle of court height - Y axis)
+                                        net_y_position = court_template_height / 2
+                                        current_side = 'top' if top_down_y < net_y_position else 'bottom'
+                                        
+                                        # Check for net crossing prevention only
+                                        if player_sides[person_idx] is not None and player_sides[person_idx] != current_side:
+                                            # Player is trying to cross net - prevent this
+                                            should_add_position = False
+                                            rejection_reason = "net_crossing_prevented_hip"
+                                        
+                                        if should_add_position:
+                                            # Initialize or update player side
+                                            if player_sides[person_idx] is None:
+                                                player_sides[person_idx] = current_side
+                                                logger.info(f"Player {person_idx} initialized on {current_side} side of net (hip)")
+                                            else:
+                                                player_sides[person_idx] = current_side
+                                            
+                                            player_positions_top_down[person_idx].append((top_down_x, top_down_y))
+                                            current_frame_positions.append((top_down_x, top_down_y))
+                                            
+                                            # Calculate distance moved since last frame
+                                            if len(player_positions_top_down[person_idx]) > 1:
+                                                prev_pos = player_positions_top_down[person_idx][-2]
+                                                curr_pos = player_positions_top_down[person_idx][-1]
+                                                distance = calculate_real_world_distance(prev_pos, curr_pos)
+                                                player_distances[person_idx] += distance
+                                        else:
+                                            current_frame_positions.append(None)
+                                            if frame_idx % 50 == 0:  # Log occasionally
+                                                logger.debug(f"Frame {frame_idx}: Player {person_idx} hip position rejected - {rejection_reason}")
+                                    else:
+                                        current_frame_positions.append(None)
+                                else:
+                                    # Hip position not within court polygon - skip this detection
+                                    current_frame_positions.append(None)
+                                    if frame_idx % 50 == 0:  # Log occasionally
+                                        logger.debug(f"Frame {frame_idx}: Player {person_idx} hip position outside court polygon - skipped")
                             else:
                                 current_frame_positions.append(None)
                     else:
@@ -1077,7 +711,7 @@ async def analyze_court_movement(
         
         logger.info(f"Finished tracking {frame_idx} frames with {len(all_frame_pose_data)} pose data frames")
         
-        # Step 3.5: Apply trajectory smoothing to reduce pose tracking jitter
+        # Step 5.5: Apply trajectory smoothing to reduce pose tracking jitter
         logger.info("Applying trajectory smoothing to reduce pose tracking jitter...")
         
         # Store original positions for comparison
@@ -1110,7 +744,7 @@ async def analyze_court_movement(
         
         logger.info("Trajectory smoothing completed")
         
-        # Step 3.6: Create video visualization using smoothed trajectories
+        # Step 5.6: Create video visualization using smoothed trajectories
         logger.info("Creating movement video with smoothed trajectories...")
         
         # Setup video writer
@@ -1124,30 +758,34 @@ async def analyze_court_movement(
         for frame_num in range(max_frames):
             # Create current frame positions for visualization
             current_frame_positions_for_viz = [[] for _ in range(num_people)]
+            current_frame_distances = [0.0 for _ in range(num_people)]
             
             # Build position history up to current frame for each player
             for player_idx in range(num_people):
+                player_positions_up_to_frame = []
+                cumulative_distance = 0.0
+                
+                # Get positions up to current frame
                 for i in range(min(frame_num + 1, len(player_positions_top_down[player_idx]))):
-                    current_frame_positions_for_viz[player_idx].append(player_positions_top_down[player_idx][i])
+                    position = player_positions_top_down[player_idx][i]
+                    player_positions_up_to_frame.append(position)
+                    
+                    # Calculate cumulative distance up to this point
+                    if i > 0:
+                        prev_pos = player_positions_up_to_frame[i-1] 
+                        curr_pos = player_positions_up_to_frame[i]
+                        distance = calculate_real_world_distance(prev_pos, curr_pos)
+                        cumulative_distance += distance
+                
+                current_frame_positions_for_viz[player_idx] = player_positions_up_to_frame
+                current_frame_distances[player_idx] = cumulative_distance
             
-            # Create visualization frame using current trajectory state
+            # Create visualization frame using current trajectory state with dynamic distances
             viz_frame = create_player_trail_visualization(
                 court_template, 
-                current_frame_positions_for_viz
+                current_frame_positions_for_viz,
+                current_distances=current_frame_distances
             )
-            
-            # Add frame information
-            cv2.putText(viz_frame, f"Frame: {frame_num+1}/{max_frames}", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            
-            # Add distance information (final distances)
-            for i, distance in enumerate(player_distances):
-                cv2.putText(viz_frame, f"P{i+1} Distance: {distance:.2f}m", (10, 60 + i*30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            # Add smoothing indicator
-            cv2.putText(viz_frame, "Smoothed Trajectory", (10, court_template.shape[0] - 20),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             
             out.write(viz_frame)
             
@@ -1157,209 +795,341 @@ async def analyze_court_movement(
         out.release()
         logger.info(f"Smoothed movement video created: {movement_video_path}")
         
-        # Step 3.7: Create original video with pose overlays
-        logger.info("Creating original video with player pose overlays...")
-        pose_overlay_video_path = os.path.join(temp_dir, f"{video_name}_pose_overlay.mp4")
+        # Step 5.7: Create cropped video with human blackout only (no overlays)
+        logger.info("Creating cropped video with human blackout (preserving tracked players)...")
+        blacked_video_path = os.path.join(temp_dir, f"{video_name}_blacked.mp4")
         
-        # Reopen original video for pose overlay
-        cap_original = cv2.VideoCapture(temp_video_path)
+        # Reopen cropped video for pose overlay
+        cap_original = cv2.VideoCapture(temp_video_path)  # Now using cropped video
         if not cap_original.isOpened():
-            raise HTTPException(status_code=500, detail="Cannot reopen original video for pose overlay")
+            raise HTTPException(status_code=500, detail="Cannot reopen cropped video for pose overlay")
         
         width = int(cap_original.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap_original.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
-        # Setup video writer for pose overlay
+        # Setup video writer for blacked video
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out_pose = cv2.VideoWriter(pose_overlay_video_path, fourcc, fps, (width, height))
+        out_blacked = cv2.VideoWriter(blacked_video_path, fourcc, fps, (width, height))
         
         frame_idx = 0
+        
+        # Initialize HOG descriptor for human detection
+        hog = cv2.HOGDescriptor()
+        hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         
         while cap_original.isOpened():
             ret, frame = cap_original.read()
             if not ret:
                 break
             
-            # Get pose data for this frame if available
+            # Step 5.7.1: Detect all people in current frame for blackout
+            logger.debug(f"Frame {frame_idx}: Detecting all people for blackout...")
+            all_people_boxes, weights = hog.detectMultiScale(frame, 
+                                                            winStride=(4,4),
+                                                            padding=(8,8), 
+                                                            scale=1.05)
+            
+            # Step 5.7.2: Get tracked people data for this frame
+            tracked_people_boxes = []
+            people_data = []
             if frame_idx < len(all_frame_pose_data):
                 people_data = all_frame_pose_data[frame_idx]
                 
-                # Draw pose skeletons for each detected person
+                # Create bounding boxes for tracked people based on their pose data
                 for person_idx, person_joints in enumerate(people_data):
-                    if person_idx < num_people and person_joints:  # Check for non-empty pose data
-                        # Define player colors
-                        player_colors = [(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 0)]  # Blue, Red, Green, Yellow
-                        color = player_colors[person_idx % len(player_colors)]
+                    if person_idx < num_people and person_joints:  # Valid tracked person
+                        # Calculate bounding box from joint positions
+                        joint_x_coords = []
+                        joint_y_coords = []
                         
-                        # Draw skeleton connections
-                        pose_connections = [
-                            # Face
-                            ('LeftEye', 'RightEye'), ('LeftEye', 'Nose'), ('RightEye', 'Nose'),
-                            ('LeftEar', 'LeftEye'), ('RightEar', 'RightEye'),
-                            
-                            # Upper body
-                            ('LeftShoulder', 'RightShoulder'),
-                            ('LeftShoulder', 'LeftElbow'), ('LeftElbow', 'LeftWrist'),
-                            ('RightShoulder', 'RightElbow'), ('RightElbow', 'RightWrist'),
-                            ('LeftShoulder', 'LeftHip'), ('RightShoulder', 'RightHip'),
-                            ('LeftHip', 'RightHip'),
-                            
-                            # Lower body
-                            ('LeftHip', 'LeftKnee'), ('LeftKnee', 'LeftAnkle'),
-                            ('RightHip', 'RightKnee'), ('RightKnee', 'RightAnkle'),
-                            
-                            # Hands
-                            ('LeftWrist', 'LeftThumb'), ('LeftWrist', 'LeftIndex'),
-                            ('LeftWrist', 'LeftPinky'), ('LeftIndex', 'LeftPinky'),
-                            ('RightWrist', 'RightThumb'), ('RightWrist', 'RightIndex'),
-                            ('RightWrist', 'RightPinky'), ('RightIndex', 'RightPinky'),
-                            
-                            # Feet
-                            ('LeftAnkle', 'LeftHeel'), ('LeftAnkle', 'LeftToe'),
-                            ('RightAnkle', 'RightHeel'), ('RightAnkle', 'RightToe')
-                        ]
-                        
-                        # Draw connections
-                        for joint1, joint2 in pose_connections:
-                            if joint1 in person_joints and joint2 in person_joints:
-                                x1, y1, z1 = person_joints[joint1]
-                                x2, y2, z2 = person_joints[joint2]
-                                if x1 > 0 and y1 > 0 and x2 > 0 and y2 > 0:  # Valid coordinates
-                                    cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
-                        
-                        # Draw joint points
                         for joint_name, (x, y, z) in person_joints.items():
                             if x > 0 and y > 0:  # Valid coordinates
-                                cv2.circle(frame, (int(x), int(y)), 4, color, -1)
-                                cv2.circle(frame, (int(x), int(y)), 6, (255, 255, 255), 1)
+                                joint_x_coords.append(x)
+                                joint_y_coords.append(y)
                         
-                        # Add player label
-                        if 'LeftShoulder' in person_joints and 'RightShoulder' in person_joints:
-                            left_shoulder = person_joints['LeftShoulder']
-                            right_shoulder = person_joints['RightShoulder']
-                            if left_shoulder[0] > 0 and left_shoulder[1] > 0 and right_shoulder[0] > 0 and right_shoulder[1] > 0:
-                                label_x = int((left_shoulder[0] + right_shoulder[0]) / 2)
-                                label_y = int(min(left_shoulder[1], right_shoulder[1]) - 20)
-                                cv2.putText(frame, f"Player {person_idx + 1}", (label_x - 40, label_y),
-                                          cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                        if joint_x_coords and joint_y_coords:
+                            margin = 30
+                            x_min = max(0, min(joint_x_coords) - margin)
+                            y_min = max(0, min(joint_y_coords) - margin)
+                            x_max = min(width, max(joint_x_coords) + margin)
+                            y_max = min(height, max(joint_y_coords) + margin)
+                            tracked_people_boxes.append((x_min, y_min, x_max - x_min, y_max - y_min))
             
-            # Add frame information and tracking status
-            cv2.putText(frame, f"Frame: {frame_idx + 1}", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            # Step 5.7.3: Create optimized blackout with tracked player preservation
+            final_frame = frame.copy()
             
-            # Add tracking status indicator
-            if frame_idx < len(all_frame_pose_data):
-                people_tracked = len([p for p in all_frame_pose_data[frame_idx] if p])
-                tracking_status = f"Detected: {people_tracked}/{num_people}" if people_tracked > 0 else "No Detection"
-                status_color = (0, 255, 0) if people_tracked > 0 else (0, 0, 255)
-                cv2.putText(frame, tracking_status, (10, 60),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
+            # Create blackout mask for non-tracked people
+            for (x, y, w, h) in all_people_boxes:
+                is_tracked = False
+                
+                # Check if this detected person overlaps with any tracked person
+                for (tx, ty, tw, th) in tracked_people_boxes:
+                    # Calculate overlap between detected person and tracked person
+                    overlap_x1 = max(x, tx)
+                    overlap_y1 = max(y, ty)
+                    overlap_x2 = min(x + w, tx + tw)
+                    overlap_y2 = min(y + h, ty + th)
+                    
+                    if overlap_x1 < overlap_x2 and overlap_y1 < overlap_y2:
+                        overlap_area = (overlap_x2 - overlap_x1) * (overlap_y2 - overlap_y1)
+                        detected_area = w * h
+                        overlap_ratio = overlap_area / detected_area if detected_area > 0 else 0
+                        
+                        if overlap_ratio > 0.3:  # 30% overlap threshold
+                            is_tracked = True
+                            break
+                
+                # If not tracked, black out this person's area
+                if not is_tracked:
+                    # Expand blackout area slightly to ensure full coverage
+                    margin = 10
+                    x1 = max(0, x - margin)
+                    y1 = max(0, y - margin)
+                    x2 = min(width, x + w + margin)
+                    y2 = min(height, y + h + margin)
+                    
+                    # Set this area to black
+                    final_frame[y1:y2, x1:x2] = [0, 0, 0]
+                    
+                    logger.debug(f"Frame {frame_idx}: Blacked out non-tracked person at ({x}, {y}, {w}, {h})")
             
-            out_pose.write(frame)
+            # Step 5.7.4: Preserve tracked player areas (override any blackout)
+            # This ensures tracked players are always visible even if they overlap with detected non-tracked people
+            for (tx, ty, tw, th) in tracked_people_boxes:
+                # Restore original frame content for tracked player areas
+                tx1 = max(0, int(tx))
+                ty1 = max(0, int(ty))
+                tx2 = min(width, int(tx + tw))
+                ty2 = min(height, int(ty + th))
+                
+                # Copy original frame content back to preserve tracked player
+                final_frame[ty1:ty2, tx1:tx2] = frame[ty1:ty2, tx1:tx2]
+            
+            out_blacked.write(final_frame)
             frame_idx += 1
             
             if frame_idx % 100 == 0:
                 logger.info(f"Generated pose overlay frame {frame_idx}")
         
         cap_original.release()
-        out_pose.release()
-        logger.info(f"Pose overlay video created: {pose_overlay_video_path}")
+        out_blacked.release()
+        logger.info(f"Blacked video created: {blacked_video_path}")
         
-        # Step 4: Save movement data to CSV
-        movement_csv_path = os.path.join(temp_dir, f"{video_name}_movement_data.csv")
-        with open(movement_csv_path, 'w') as f:
-            f.write("Frame,Player,X_TopDown,Y_TopDown,Distance_Moved_m,Total_Distance_m\n")
-            
-            max_frames = max(len(positions) for positions in player_positions_top_down) if player_positions_top_down else 0
-            
-            for frame_num in range(max_frames):
-                for player_idx in range(num_people):
-                    if frame_num < len(player_positions_top_down[player_idx]):
-                        pos = player_positions_top_down[player_idx][frame_num]
+        # Step 5.8: Run shuttlecock tracking on blacked video
+        logger.info("Step 5.8: Running shuttlecock tracking on blacked video...")
+        shuttlecock_tracked_video_path = ""
+        shuttlecock_csv_path = ""
+        
+        if TRACKNET_AVAILABLE:
+            try:
+                # Setup model paths
+                tracknet_model_path = os.path.join(os.path.dirname(__file__), "TrackNetV3", "ckpts", "TrackNet_best.pt")
+                inpaintnet_model_path = os.path.join(os.path.dirname(__file__), "TrackNetV3", "ckpts", "InpaintNet_best.pt")
+                
+                if os.path.exists(tracknet_model_path):
+                    # Setup device
+                    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                    logger.info(f"Using device for shuttlecock tracking: {device}")
+                    
+                    # Get video properties for image scaling
+                    cap_shuttle = cv2.VideoCapture(blacked_video_path)
+                    w_shuttle, h_shuttle = (int(cap_shuttle.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap_shuttle.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+                    cap_shuttle.release()
+                    w_scaler, h_scaler = w_shuttle / WIDTH, h_shuttle / HEIGHT
+                    img_scaler = (w_scaler, h_scaler)
+                    logger.info(f"Shuttlecock tracking - Video dimensions: {w_shuttle}x{h_shuttle}, scaling: {img_scaler}")
+                    
+                    # Load TrackNet model
+                    tracknet_ckpt = torch.load(tracknet_model_path, map_location=device)
+                    tracknet_seq_len = int(tracknet_ckpt['param_dict']['seq_len'])
+                    bg_mode = tracknet_ckpt['param_dict']['bg_mode']
+                    tracknet = get_model('TrackNet', tracknet_seq_len, bg_mode).to(device)
+                    tracknet.load_state_dict(tracknet_ckpt['model'])
+                    tracknet.eval()
+                    
+                    # Initialize prediction dictionary
+                    tracknet_pred_dict = {'Frame': [], 'X': [], 'Y': [], 'Visibility': [], 'Inpaint_Mask': [],
+                                         'Img_scaler': img_scaler, 'Img_shape': (w_shuttle, h_shuttle)}
+                    
+                    # Run TrackNet prediction with temporal ensemble (weight mode)
+                    logger.info(f"Running TrackNet prediction with weight ensemble...")
+                    seq_len = tracknet_seq_len
+                    eval_mode = 'weight'  # Use weight mode for best results
+                    batch_size = 16
+                    
+                    # Temporal ensemble (weight mode)
+                    dataset = Video_IterableDataset(blacked_video_path, seq_len, 1, bg_mode)
+                    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=0)
+                    video_len = dataset.video_len
+                    logger.info(f"Shuttlecock tracking - Video length: {video_len} frames")
+                    
+                    # Initialize ensemble parameters
+                    num_sample, sample_count = video_len - seq_len + 1, 0
+                    buffer_size = seq_len - 1
+                    batch_i = torch.arange(seq_len)
+                    frame_i = torch.arange(seq_len - 1, -1, -1)
+                    y_pred_buffer = torch.zeros((buffer_size, seq_len, HEIGHT, WIDTH), dtype=torch.float32)
+                    weight = get_ensemble_weight(seq_len, eval_mode)
+                    
+                    from tqdm import tqdm
+                    for step, (i, x) in enumerate(tqdm(dataloader, desc="Processing shuttlecock frames")):
+                        x = x.float().to(device)
+                        b_size, seq_len_curr = i.shape[0], i.shape[1]
                         
-                        # Calculate frame-to-frame distance
-                        frame_distance = 0.0
-                        if frame_num > 0 and frame_num-1 < len(player_positions_top_down[player_idx]):
-                            prev_pos = player_positions_top_down[player_idx][frame_num-1]
-                            frame_distance = calculate_real_world_distance(prev_pos, pos)
+                        with torch.no_grad():
+                            y_pred = tracknet(x).detach().cpu()
                         
-                        # Calculate cumulative distance up to this frame
-                        cumulative_distance = 0.0
-                        for i in range(1, frame_num + 1):
-                            if i < len(player_positions_top_down[player_idx]):
-                                prev_pos = player_positions_top_down[player_idx][i-1]
-                                curr_pos = player_positions_top_down[player_idx][i]
-                                cumulative_distance += calculate_real_world_distance(prev_pos, curr_pos)
+                        y_pred_buffer = torch.cat((y_pred_buffer, y_pred), dim=0)
+                        ensemble_i = torch.empty((0, 1, 2), dtype=torch.float32)
+                        ensemble_y_pred = torch.empty((0, 1, HEIGHT, WIDTH), dtype=torch.float32)
                         
-                        f.write(f"{frame_num},{player_idx+1},{pos[0]:.2f},{pos[1]:.2f},{frame_distance:.4f},{cumulative_distance:.4f}\n")
+                        for b in range(b_size):
+                            if sample_count < buffer_size:
+                                # Incomplete buffer
+                                y_pred_ens = y_pred_buffer[batch_i + b, frame_i].sum(0) / (sample_count + 1)
+                            else:
+                                # General case with ensemble weights
+                                y_pred_ens = (y_pred_buffer[batch_i + b, frame_i] * weight[:, None, None]).sum(0)
+                            
+                            ensemble_i = torch.cat((ensemble_i, i[b][0].reshape(1, 1, 2)), dim=0)
+                            ensemble_y_pred = torch.cat((ensemble_y_pred, y_pred_ens.reshape(1, 1, HEIGHT, WIDTH)), dim=0)
+                            sample_count += 1
+                            
+                            if sample_count == num_sample:
+                                # Handle last frames
+                                y_zero_pad = torch.zeros((buffer_size, seq_len, HEIGHT, WIDTH), dtype=torch.float32)
+                                y_pred_buffer = torch.cat((y_pred_buffer, y_zero_pad), dim=0)
+                                
+                                for f in range(1, seq_len):
+                                    y_pred_ens = y_pred_buffer[batch_i + b + f, frame_i].sum(0) / (seq_len - f)
+                                    ensemble_i = torch.cat((ensemble_i, i[-1][f].reshape(1, 1, 2)), dim=0)
+                                    ensemble_y_pred = torch.cat((ensemble_y_pred, y_pred_ens.reshape(1, 1, HEIGHT, WIDTH)), dim=0)
+                        
+                        # Get predictions with proper image scaling
+                        tmp_pred = predict(ensemble_i, y_pred=ensemble_y_pred, img_scaler=img_scaler)
+                        for key in tmp_pred.keys():
+                            tracknet_pred_dict[key].extend(tmp_pred[key])
+                        
+                        # Update buffer
+                        y_pred_buffer = y_pred_buffer[-buffer_size:]
+                    
+                    # Apply noise filtering to shuttlecock tracking
+                    logger.info("Applying noise filtering to shuttlecock tracking...")
+                    final_pred_dict = apply_noise_filtering(tracknet_pred_dict, fps=fps, video_width=w_shuttle, video_height=h_shuttle)
+                    
+                    if final_pred_dict['Frame']:
+                        # Save shuttlecock trajectory CSV
+                        shuttlecock_csv_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracking.csv")
+                        write_pred_csv(final_pred_dict, shuttlecock_csv_path)
+                        logger.info(f"Shuttlecock trajectory saved to: {shuttlecock_csv_path}")
+                        
+                        # Create shuttlecock tracking video
+                        logger.info("Creating shuttlecock tracking video...")
+                        shuttlecock_tracked_video_path = os.path.join(temp_dir, f"{video_name}_shuttlecock_tracked.mp4")
+                        
+                        # Read blacked video for shuttlecock overlay
+                        cap_shuttle = cv2.VideoCapture(blacked_video_path)
+                        if cap_shuttle.isOpened():
+                            # Setup video writer
+                            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                            out_shuttle = cv2.VideoWriter(shuttlecock_tracked_video_path, fourcc, fps, (w_shuttle, h_shuttle))
+                            
+                            # Process frames with shuttlecock tracking overlay
+                            trail_positions = []  # Store recent positions for trail effect
+                            frame_idx_shuttle = 0
+                            track_trail_length = 10  # Default trail length
+                            
+                            # Create lookup dictionary for shuttlecock frame data
+                            shuttle_frame_data_lookup = {}
+                            for i in range(len(final_pred_dict['Frame'])):
+                                frame_num = int(final_pred_dict['Frame'][i]) if str(final_pred_dict['Frame'][i]).isdigit() else i
+                                shuttle_frame_data_lookup[frame_num] = {
+                                    'x': float(final_pred_dict['X'][i]) if final_pred_dict['X'][i] != '' else 0,
+                                    'y': float(final_pred_dict['Y'][i]) if final_pred_dict['Y'][i] != '' else 0,
+                                    'visibility': float(final_pred_dict['Visibility'][i]) if final_pred_dict['Visibility'][i] != '' else 0
+                                }
+                            
+                            while cap_shuttle.isOpened():
+                                ret, frame = cap_shuttle.read()
+                                if not ret:
+                                    break
+                                
+                                # Get shuttlecock position for this frame
+                                if frame_idx_shuttle in shuttle_frame_data_lookup:
+                                    x = shuttle_frame_data_lookup[frame_idx_shuttle]['x']
+                                    y = shuttle_frame_data_lookup[frame_idx_shuttle]['y']
+                                    visibility = shuttle_frame_data_lookup[frame_idx_shuttle]['visibility']
+                                    
+                                    # Add to trail if visible
+                                    if visibility > 0.5 and x > 0 and y > 0:
+                                        trail_positions.append((int(x), int(y)))
+                                        
+                                        # Keep only recent positions for trail
+                                        if len(trail_positions) > track_trail_length:
+                                            trail_positions.pop(0)
+                                        
+                                        # Draw trail (fading effect)
+                                        for i, (tx, ty) in enumerate(trail_positions):
+                                            alpha = (i + 1) / len(trail_positions)  # Fade from 0 to 1
+                                            color_intensity = int(255 * alpha)
+                                            
+                                            # Draw trail point
+                                            cv2.circle(frame, (tx, ty), max(2, int(4 * alpha)), 
+                                                     (0, color_intensity, 255), -1)
+                                        
+                                        # Draw current position (larger, brighter)
+                                        cv2.circle(frame, (int(x), int(y)), 6, (0, 255, 255), -1)
+                                        cv2.circle(frame, (int(x), int(y)), 8, (0, 0, 255), 2)
+                                
+                                out_shuttle.write(frame)
+                                frame_idx_shuttle += 1
+                            
+                            cap_shuttle.release()
+                            out_shuttle.release()
+                            logger.info(f"Shuttlecock tracking video created: {shuttlecock_tracked_video_path}")
+                        else:
+                            logger.error("Cannot open blacked video for shuttlecock tracking")
+                    else:
+                        logger.warning("No valid shuttlecock tracking data after noise filtering")
+                else:
+                    logger.warning("TrackNet model not found, skipping shuttlecock tracking")
+            except Exception as e:
+                logger.error(f"Error in shuttlecock tracking: {str(e)}")
+                logger.error(traceback.format_exc())
+        else:
+            logger.warning("TrackNetV3 dependencies not available, skipping shuttlecock tracking")
         
-        logger.info(f"Movement data saved to: {movement_csv_path}")
+        # Removed CSV and transformation data exports - focus on videos only
         
-        # Step 5: Save transformation matrix
-        transform_data_path = os.path.join(temp_dir, f"{video_name}_transform_data.txt")
-        with open(transform_data_path, 'w') as f:
-            f.write("# Court Movement Analysis Data\n")
-            f.write(f"# Video: {file.filename}\n")
-            f.write(f"# Players tracked: {num_people}\n")
-            f.write(f"# Court type: {court_type}\n")
-            f.write("\n# Total distances moved (meters):\n")
-            for i, distance in enumerate(player_distances):
-                f.write(f"Player_{i+1}_Total_Distance: {distance:.4f}\n")
-            
-            f.write("\n# Court key points (original video coordinates):\n")
-            for i, (x, y) in enumerate(court_points):
-                f.write(f"Court_Point_{i+1}: {x};{y}\n")
-            
-            f.write("\n# Perspective transformation matrix:\n")
-            for i, row in enumerate(transform_matrix):
-                f.write(f"Transform_Row_{i+1}: {','.join(map(str, row))}\n")
-        
-        logger.info(f"Transform data saved to: {transform_data_path}")
-        
-        # Step 6: Create summary statistics
-        summary_stats = {
-            'total_frames_processed': frame_idx,
-            'players_tracked': num_people,
-            'court_type': court_type,
-            'player_distances': {f'player_{i+1}': round(dist, 4) for i, dist in enumerate(player_distances)},
-            'video_duration_seconds': frame_idx / fps if fps > 0 else 0,
-            'movement_validation': 'net_crossing_prevention_only',
-            'trajectory_smoothing': 'enabled_savgol_filter' if SCIPY_AVAILABLE else 'enabled_moving_average'
-        }
-        
-        logger.info(f"Movement analysis summary: {summary_stats}")
-        
-        # Create zip file with all results
-        zip_path = os.path.join(temp_dir, f"{video_name}_court_movement_analysis.zip")
+        # Create zip file with match analysis results
+        zip_path = os.path.join(temp_dir, f"{video_name}_match_analysis.zip")
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add movement video
-            zipf.write(movement_video_path, f"{video_name}_court_movement.mp4")
-            # Add pose overlay video
-            zipf.write(pose_overlay_video_path, f"{video_name}_pose_overlay.mp4")
-            # Add movement data CSV
-            zipf.write(movement_csv_path, f"{video_name}_movement_data.csv")  
-            # Add transformation data
-            zipf.write(transform_data_path, f"{video_name}_transform_data.txt")
-            # Add debug court detection image
-            if os.path.exists(debug_court_img_path):
-                zipf.write(debug_court_img_path, f"{video_name}_debug_court_detection.jpg")
+            # Add blacked video (non-tracked people removed, tracked players preserved)
+            zipf.write(blacked_video_path, f"{video_name}_blacked.mp4")
+            # Add top-down movement video
+            zipf.write(movement_video_path, f"{video_name}_top_down_movement.mp4")
+            # Add shuttlecock tracking results if available
+            if shuttlecock_tracked_video_path and os.path.exists(shuttlecock_tracked_video_path):
+                zipf.write(shuttlecock_tracked_video_path, f"{video_name}_shuttlecock_tracked.mp4")
+            if shuttlecock_csv_path and os.path.exists(shuttlecock_csv_path):
+                zipf.write(shuttlecock_csv_path, f"{video_name}_shuttlecock_tracking.csv")
         
-        logger.info(f"Court movement analysis complete. Zip file created: {zip_path}")
+        logger.info(f"Match analysis complete. Zip file created: {zip_path}")
         
         # Return zip file
         return FileResponse(
             zip_path,
             media_type="application/zip",
-            filename=f"{video_name}_court_movement_analysis.zip",
+            filename=f"{video_name}_match_analysis.zip",
             background=None
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in court movement analysis: {str(e)}")
+        logger.error(f"Error in match analysis: {str(e)}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Court movement analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Match analysis failed: {str(e)}")
     
     finally:
         # Cleanup will happen after response is sent
@@ -1367,9 +1137,9 @@ async def analyze_court_movement(
 
 @app.get("/")
 async def root():
-    return {"status": "MoveInsight Analysis Server is running", "version": "1.4.0 - Refactored Match Analysis"}
+    return {"status": "MoveInsight Analysis Server is running", "version": "2.0.0 - Comprehensive Match Analysis with Integrated Shuttlecock Tracking"}
 
 if __name__ == "__main__":
     import uvicorn
-    logger.info("Starting MoveInsight Analysis Server with refactored match analysis (v1.4.0)...")
+    logger.info("Starting MoveInsight Analysis Server with comprehensive match analysis (v2.0.0)...")
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

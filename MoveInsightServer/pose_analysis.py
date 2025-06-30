@@ -241,10 +241,10 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
                     joint_data[joint_name] = [x_full, y_full, z]
                     total_landmarks += 1
                     
-                    # Check if landmark is in court area
+                    # Check if landmark is in court area using accurate polygon method
                     if court_points:
-                        from court_detection import point_in_court_region
-                        if point_in_court_region(x_full, y_full, court_points):
+                        from court_detection import point_in_court_polygon
+                        if point_in_court_polygon(x_full, y_full, court_points, margin=20.0):
                             landmarks_in_court += 1
             
             # Calculate court overlap ratio
@@ -269,6 +269,9 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
         
         if results.pose_landmarks:
             joint_data = {}
+            landmarks_in_court = 0
+            total_landmarks = 0
+            
             for idx, lm in enumerate(results.pose_landmarks.landmark):
                 if idx in JOINT_MAP:
                     original_joint_name = JOINT_MAP[idx]
@@ -279,13 +282,26 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
                     z = lm.z
                     
                     joint_data[joint_name] = [x, y, z]
+                    total_landmarks += 1
+                    
+                    # Check if landmark is in court area using accurate polygon method
+                    if court_points:
+                        from court_detection import point_in_court_polygon
+                        if point_in_court_polygon(x, y, court_points, margin=20.0):
+                            landmarks_in_court += 1
             
-            detected_people.append({
-                'joint_data': joint_data,
-                'bbox_area': width * height,
-                'court_overlap_ratio': 1.0,
-                'bbox': (0, 0, width, height)
-            })
+            # Calculate court overlap ratio for fallback detection
+            court_overlap_ratio = landmarks_in_court / total_landmarks if total_landmarks > 0 else 0
+            
+            # Only add if person has sufficient court overlap (same 30% threshold)
+            if court_points is None or court_overlap_ratio > 0.3:
+                detected_people.append({
+                    'joint_data': joint_data,
+                    'bbox_area': width * height,
+                    'court_overlap_ratio': court_overlap_ratio,
+                    'bbox': (0, 0, width, height)
+                })
+                logger.info(f"Fallback person: court_overlap={court_overlap_ratio:.2f}")
     
     # Sort by bounding box area (largest first) and take top num_people
     detected_people.sort(key=lambda x: x['bbox_area'], reverse=True)
