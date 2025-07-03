@@ -200,8 +200,6 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
                                                 padding=(8,8), 
                                                 scale=1.05)
     
-    logger.info(f"HOG detected {len(people_boxes)} people in frame")
-    
     # Process each detected person
     for i, (x, y, w, h) in enumerate(people_boxes):
         if len(detected_people) >= num_people:
@@ -260,11 +258,9 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
             # Filter by court area if court_points provided
             if court_points is None or court_overlap_ratio > 0.3:  # At least 30% overlap with court
                 detected_people.append(person_data)
-                logger.info(f"Person {i}: bbox_area={w*h}, court_overlap={court_overlap_ratio:.2f}")
     
     # If HOG didn't detect enough people, fallback to single person detection on full frame
     if len(detected_people) == 0:
-        logger.warning("HOG detection failed, falling back to single person detection")
         results = pose_estimator.process(frame_rgb)
         
         if results.pose_landmarks:
@@ -301,13 +297,10 @@ def detect_multiple_people_in_frame(frame, pose_estimator, court_points: Optiona
                     'court_overlap_ratio': court_overlap_ratio,
                     'bbox': (0, 0, width, height)
                 })
-                logger.info(f"Fallback person: court_overlap={court_overlap_ratio:.2f}")
     
     # Sort by bounding box area (largest first) and take top num_people
     detected_people.sort(key=lambda x: x['bbox_area'], reverse=True)
     detected_people = detected_people[:num_people]
-    
-    logger.info(f"Final detection: {len(detected_people)} people will be tracked")
     
     # Return just the joint data
     return [person['joint_data'] for person in detected_people]

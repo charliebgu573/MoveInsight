@@ -18,12 +18,14 @@ class VideoAnalysisResponseModel(BaseModel):
     total_frames: int
     joint_data_per_frame: List[FrameDataItem]
     swing_analysis: Optional[Dict[str, bool]] = None
+    overall_score: Optional[float] = None
 
 class TechniqueComparisonRequestDataModel(BaseModel):
     """Request model for technique comparison endpoint."""
     user_video_frames: List[FrameDataItem]  # Contains 3D data
     model_video_frames: List[FrameDataItem]  # Contains 3D data
     dominant_side: str
+    technique_type: str = "overhead_clear" # New field for technique type
 
 class ComparisonResultModel(BaseModel):
     """Response model for technique comparison results."""
@@ -32,3 +34,12 @@ class ComparisonResultModel(BaseModel):
     similarity: Dict[str, bool]
     user_details: Dict[str, bool]
     reference_details: Dict[str, bool]
+
+class OverheadClearAnalysis(BaseModel):
+    score: float
+    details: Dict[str, bool]
+
+class MatchAnalysisResponseModel(BaseModel):
+    movement_video_path: str
+    overhead_clear_count: int
+    overhead_clear_analyses: List[OverheadClearAnalysis]
